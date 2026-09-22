@@ -1,25 +1,9 @@
+
 name: Documentation Checks
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '**.md'
-      - '.github/workflows/docs-check.yml'
-      - '.github/markdown-link-check-config.json'
-      - '.markdownlint.json'
-      - 'scripts/check_*.py'
-  pull_request:
-    branches: [main]
-    paths:
-      - '**.md'
-      - 'CONTRIBUTING.md'
-      - 'LICENSE'
-      - '.github/markdown-link-check-config.json'
-      - '.markdownlint.json'
-      - 'scripts/check_*.py'
-
-# Cancel in-progress runs for the same branch
+  workflow_dispatch:
+  # Automatic triggers removed; invoke through FounderOS/Admin Gate.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

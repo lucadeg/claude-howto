@@ -1,22 +1,9 @@
+
 name: Automated Testing
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/test.yml'
-      - 'pyproject.toml'
-      - 'requirements*.txt'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'scripts/**'
-      - '.github/workflows/test.yml'
-      - 'pyproject.toml'
-      - 'requirements*.txt'
-
-# Cancel in-progress runs for the same branch
+  workflow_dispatch:
+  # Automatic triggers removed; invoke through FounderOS/Admin Gate.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
