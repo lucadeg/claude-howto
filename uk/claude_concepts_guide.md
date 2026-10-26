@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Повний довідник концепцій Claude
@@ -263,8 +263,8 @@ sequenceDiagram
 |---------------|------|---------|---------|
 | `name` | String | Ідентифікатор агента | `code-reviewer` |
 | `description` | String | Призначення та ключові слова | `Comprehensive code quality analysis` |
-| `tools` | List/String | Дозволені можливості | `read, grep, diff, lint_runner` |
-| `system_prompt` | Markdown | Поведінкові інструкції | Користувацькі настанови |
+| `tools` | List/String | Дозволені інструменти | `Read, Grep, Glob, Bash` |
+| *(тіло markdown)* | Markdown | Системний промпт / поведінкові інструкції | Користувацькі настанови |
 
 ### Ієрархія доступу до інструментів
 
@@ -289,7 +289,7 @@ graph TD
 ---
 name: code-reviewer
 description: Comprehensive code quality and maintainability analysis
-tools: read, grep, diff, lint_runner
+tools: Read, Grep, Glob, Bash
 ---
 
 # Code Reviewer Agent
@@ -563,7 +563,7 @@ graph TB
 
 ### Ієрархія пам'яті в Claude Code (7 рівнів)
 
-Claude Code завантажує пам'ять із 7 рівнів, від найвищого до найнижчого пріоритету:
+Claude Code завантажує пам'ять із 7 рівнів. Файли CLAUDE.md не перевизначають один одного, а об'єднуються в контексті й завантажуються в порядку managed → user → project → local (пізніші, більш специфічні файли читаються останніми):
 
 ```mermaid
 graph TD
@@ -571,7 +571,7 @@ graph TD
     B --> C["3. Project Rules<br/>.claude/rules/*.md"]
     C --> D["4. User Memory<br/>~/.claude/CLAUDE.md"]
     D --> E["5. User Rules<br/>~/.claude/rules/*.md"]
-    E --> F["6. Local Memory<br/>.claude/local/CLAUDE.md"]
+    E --> F["6. Local Memory<br/>./CLAUDE.local.md"]
     F --> G["7. Auto Memory<br/>Automatically captured preferences"]
 
     style A fill:#fce4ec,stroke:#333,color:#333
@@ -592,8 +592,8 @@ graph TD
 | 3. Правила проєкту | `.claude/rules/*.md` | Проєкт | Високий | Команда (Git) | Модульні конвенції проєкту |
 | 4. Користувач | `~/.claude/CLAUDE.md` | Персональний | Середній | Індивідуальний | Особисті налаштування |
 | 5. Правила користувача | `~/.claude/rules/*.md` | Персональний | Середній | Індивідуальний | Персональні модулі правил |
-| 6. Локальний | `.claude/local/CLAUDE.md` | Локальний | Низький | Не спільний | Налаштування конкретної машини |
-| 7. Авто-пам'ять | Автоматичний | Сесія | Найнижчий | Індивідуальний | Засвоєні вподобання, патерни |
+| 6. Локальний | `./CLAUDE.local.md` | Локальний | Низький | Не спільний | Налаштування конкретної машини |
+| 7. Авто-пам'ять | Автоматичний | Репозиторій | Найнижчий | Індивідуальний | Засвоєні вподобання, патерни |
 
 ### Авто-пам'ять
 
@@ -1080,46 +1080,7 @@ Reviewers: @bob, @charlie
 - `create_commit` - Create new commit
 ~~~~
 
-#### Приклад 2: Налаштування Database MCP
-
-**Конфігурація:**
-
-```json
-{
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-database"],
-      "env": {
-        "DATABASE_URL": "postgresql://user:pass@localhost/mydb"
-      }
-    }
-  }
-}
-```
-
-**Приклад використання:**
-
-```markdown
-User: Fetch all users with more than 10 orders
-
-Claude: I'll query your database to find that information.
-
-# Using MCP database tool:
-SELECT u.*, COUNT(o.id) as order_count
-FROM users u
-LEFT JOIN orders o ON u.id = o.user_id
-GROUP BY u.id
-HAVING COUNT(o.id) > 10
-ORDER BY order_count DESC;
-
-# Results:
-- Alice: 15 orders
-- Bob: 12 orders
-- Charlie: 11 orders
-```
-
-#### Приклад 3: Робочий процес з кількома MCP
+#### Приклад 2: Робочий процес з кількома MCP
 
 **Сценарій: Генерація щоденного звіту**
 
@@ -1166,7 +1127,7 @@ Final Output:
 💰 $12,450 in daily sales
 ```
 
-#### Приклад 4: Операції Filesystem MCP
+#### Приклад 3: Операції Filesystem MCP
 
 **Конфігурація:**
 
@@ -1308,15 +1269,15 @@ graph TB
 
 ### Комплектні навички
 
-Claude Code тепер включає 5 комплектних навичок, доступних одразу:
+Claude Code тепер включає 20 комплектних навичок, доступних одразу:
 
 | Навичка | Команда | Призначення |
 |-------|---------|---------|
 | **Simplify** | `/simplify` | Спрощення складного коду або пояснень |
 | **Batch** | `/batch` | Виконання операцій над кількома файлами або елементами |
-| **Debug** | `/debug` | Систематичне налагодження з аналізом кореневої причини |
+| **Debug** | `/debug` | Увімкнути журнал налагодження поточної сесії та шукати причину проблем, читаючи цей журнал |
 | **Loop** | `/loop` | Планування повторюваних завдань за таймером |
-| **Claude API** | `/claude-api` | Пряма взаємодія з Anthropic API |
+| **Claude API** | `/claude-api` | Завантажити довідкові матеріали Claude API та Managed Agents для мови вашого проєкту; вмикається автоматично, коли код імпортує `anthropic` або `@anthropic-ai/sdk` |
 
 Ці комплектні навички завжди доступні і не потребують встановлення або конфігурації.
 
@@ -2195,7 +2156,7 @@ sequenceDiagram
     participant Hooks
     participant Tools as Configured Tools
 
-    User->>Claude: /plugin install pr-review
+    User->>Claude: claude --plugin-dir ./07-plugins/pr-review
     Claude->>Plugin: Download plugin manifest
     Plugin-->>Claude: Return plugin definition
     Claude->>Install: Extract components
@@ -2221,39 +2182,14 @@ sequenceDiagram
 
 ### Структура визначення плагіна
 
-```yaml
----
-name: plugin-name
-version: "1.0.0"
-description: "What this plugin does"
-author: "Your Name"
-license: MIT
+Маніфест — це JSON-файл `.claude-plugin/plugin.json`. Обов'язкове лише поле `name`, а нерозпізнані ключі верхнього рівня відкидаються:
 
-# Plugin metadata
-tags:
-  - category
-  - use-case
-
-# Requirements
-requires:
-  - claude-code: ">=1.0.0"
-
-# Components bundled
-components:
-  - type: commands
-    path: commands/
-  - type: agents
-    path: agents/
-  - type: mcp
-    path: mcp/
-  - type: hooks
-    path: hooks/
-
-# Configuration
-config:
-  auto_load: true
-  enabled_by_default: true
----
+```json
+{
+  "name": "plugin-name",
+  "version": "1.0.0",
+  "description": "What this plugin does"
+}
 ```
 
 ### Структура плагіна
@@ -2271,11 +2207,13 @@ my-plugin/
 │   ├── specialist-2.md
 │   └── configs/
 ├── skills/
-│   ├── skill-1.md
-│   └── skill-2.md
+│   └── skill-name/
+│       └── SKILL.md
 ├── hooks/
 │   └── hooks.json
 ├── .mcp.json
+├── bin/
+│   └── my-tool
 ├── .lsp.json
 ├── settings.json
 ├── templates/
@@ -2348,7 +2286,7 @@ Specializes in finding security vulnerabilities:
 **Встановлення:**
 
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # Result:
 # ✅ 3 slash commands installed
@@ -2503,7 +2441,7 @@ graph TD
 1. Створіть структуру плагіна з усіма компонентами
 2. Напишіть маніфест `.claude-plugin/plugin.json`
 3. Створіть `README.md` з документацією
-4. Протестуйте локально за допомогою `/plugin install ./my-plugin`
+4. Протестуйте локально за допомогою `claude --plugin-dir ./my-plugin`
 5. Надішліть на маркетплейс плагінів
 6. Пройдіть перевірку та затвердження
 7. Опубліковано на маркетплейсі
@@ -2525,7 +2463,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ## Installation
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ## Features
@@ -2543,7 +2481,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 ```
 
 ## Requirements
-- Claude Code 1.0+
+- Claude Code 2.1+
 - GitHub access
 - CodeQL (optional)
 ~~~~
@@ -2560,7 +2498,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 **З плагіном (2 хвилини):**
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # ✅ Everything installed and configured
 # ✅ Ready to use immediately
 # ✅ Team can reproduce exact setup
@@ -2784,7 +2722,7 @@ graph TD
 
 ### Тиждень 3: Розподіліть роботу
 - Створіть першого субагента для конкретної ролі
-- Використовуйте команду `/agents`
+- Попросіть Claude створити його або додайте файл `.claude/agents/<name>.md` (майстер `/agents` видалено)
 - Протестуйте делегування з простим завданням
 
 ### Тиждень 4: Автоматизуйте все
@@ -2808,31 +2746,39 @@ graph TD
 
 ### Події хуків
 
-Claude Code підтримує **25 подій хуків** у чотирьох типах хуків (command, http, prompt, agent):
+Claude Code підтримує **33 події хуків** у п'яти типах хуків (command, http, mcp_tool, prompt, agent):
 
 | Подія хука | Тригер | Сценарії використання |
 |------------|---------|-----------|
 | **SessionStart** | Початок/відновлення/очищення/ущільнення сесії | Налаштування середовища, ініціалізація |
+| **Setup** | Запуск із `--init-only` або `-p` з `--init` / `--maintenance` (не спрацьовує при звичайному запуску) | Підготовка інструментів, встановлення залежностей |
 | **InstructionsLoaded** | Завантажено CLAUDE.md або файл правил | Валідація, трансформація, доповнення |
 | **UserPromptSubmit** | Користувач надсилає промпт | Валідація вводу, фільтрація промптів |
+| **UserPromptExpansion** | Введена слеш-команда (навичка, користувацька команда, MCP-промпт) розгортається в промпт; може заблокувати розгортання | Блокування чи логування прямого використання `/command`, додавання контексту для навички |
 | **PreToolUse** | Перед запуском будь-якого інструменту | Валідація, шлюзи затвердження, логування |
 | **PermissionRequest** | Показано діалог дозволу | Авто-затвердження/відхилення |
+| **PermissionDenied** | Режим auto відхилив виклик інструмента (ніколи при ручному відхиленні) | Логування, аналітика, політики |
 | **PostToolUse** | Після успішного виконання інструменту | Авто-форматування, сповіщення, очищення |
 | **PostToolUseFailure** | Помилка виконання інструменту | Обробка помилок, логування |
+| **PostToolBatch** | Після завершення пакета викликів інструментів | Зведені звіти, пакетна валідація |
 | **Notification** | Надіслано сповіщення | Алертинг, зовнішні інтеграції |
+| **MessageDisplay** | Текст повідомлення асистента відображається | Перетворення або приховування тексту |
 | **SubagentStart** | Створено субагента | Ін'єкція контексту, ініціалізація |
 | **SubagentStop** | Субагент завершив роботу | Валідація результату, логування |
 | **Stop** | Claude завершив відповідь | Генерація підсумку, завдання очищення |
 | **StopFailure** | Помилка API завершує хід | Відновлення після помилки, логування |
 | **TeammateIdle** | Тімейт у команді агентів без роботи | Розподіл роботи, координація |
-| **TaskCompleted** | Завдання позначено як виконане | Пост-обробка завдання |
-| **TaskCreated** | Завдання створено через TaskCreate | Відстеження завдань, логування |
+| **TaskCompleted** | Завдання позначено як виконане (спрацьовує лише коли увімкнені todo-інструменти — доступні типово тільки на Claude 3.x, Opus 4–4.7, Sonnet 4–4.6 та Haiku 4.5; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` повертає їх) | Пост-обробка завдання |
+| **TaskCreated** | Завдання створено через TaskCreate (спрацьовує лише коли увімкнені todo-інструменти — доступні типово тільки на Claude 3.x, Opus 4–4.7, Sonnet 4–4.6 та Haiku 4.5; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` повертає їх) | Відстеження завдань, логування |
 | **ConfigChange** | Зміна конфігураційного файлу | Валідація, поширення |
 | **CwdChanged** | Зміна робочого каталогу | Налаштування для конкретного каталогу |
+| **DirectoryAdded** | Новий робочий каталог зареєстровано під час сесії | Налаштування інструментів для нового каталогу |
 | **FileChanged** | Зміна відстежуваного файлу | Моніторинг файлів, тригери перебудови |
 | **PreCompact** | Перед ущільненням контексту | Збереження стану |
 | **PostCompact** | Після завершення ущільнення | Дії після ущільнення |
-| **WorktreeCreate** | Створення worktree | Налаштування середовища, встановлення залежностей |
+| **PreModelSwitch** | Перед застосуванням запитаного перемикання моделі | Контроль або блокування зміни моделі |
+| **PostModelSwitch** | Після зміни моделі сесії | Логування або реакція на зміну моделі |
+| **WorktreeCreate** | Створення worktree | Замінює стандартне створення git worktree; має вивести шлях до worktree |
 | **WorktreeRemove** | Видалення worktree | Очищення, звільнення ресурсів |
 | **Elicitation** | MCP-сервер запитує введення користувача | Валідація вводу |
 | **ElicitationResult** | Користувач відповідає на запит | Обробка відповіді |
@@ -2851,7 +2797,7 @@ Claude Code підтримує **25 подій хуків** у чотирьох 
         "hooks": [
           {
             "type": "command",
-            "command": "prettier --write $CLAUDE_FILE_PATH"
+            "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write"
           }
         ]
       }
@@ -2862,7 +2808,7 @@ Claude Code підтримує **25 подій хуків** у чотирьох 
         "hooks": [
           {
             "type": "command",
-            "command": "eslint $CLAUDE_FILE_PATH"
+            "command": "jq -r '.tool_input.file_path' | xargs npx eslint"
           }
         ]
       }
@@ -2873,9 +2819,8 @@ Claude Code підтримує **25 подій хуків** у чотирьох 
 
 ### Змінні середовища хуків
 
-- `$CLAUDE_FILE_PATH` — Шлях до файлу, що редагується/записується
-- `$CLAUDE_TOOL_NAME` — Назва інструменту, що використовується
-- `$CLAUDE_SESSION_ID` — Ідентифікатор поточної сесії
+- Вхідні дані хука надходять як JSON через stdin (`session_id`, `tool_name`, `tool_input.file_path`, …) — читайте їх за допомогою `jq`
+- `$CLAUDE_CODE_SESSION_ID` — Ідентифікатор поточної сесії
 - `$CLAUDE_PROJECT_DIR` — Шлях до каталогу проєкту
 
 ### Найкращі практики
@@ -2921,12 +2866,13 @@ Esc + Esc
 /rewind
 ```
 
-При виборі контрольної точки доступні п'ять варіантів:
+При виборі контрольної точки доступні шість варіантів:
 1. **Відновити код і розмову** — Повернути обидва до цього моменту
 2. **Відновити розмову** — Повернути повідомлення, залишити поточний код
 3. **Відновити код** — Повернути файли, залишити розмову
 4. **Підсумувати звідси** — Стиснути розмову у підсумок
-5. **Скасувати** — Відмінити
+5. **Підсумувати до цього місця** — Стиснути все до цієї точки у підсумок
+6. **Скасувати** — Відмінити
 
 ### Сценарії використання
 
@@ -2939,9 +2885,11 @@ Esc + Esc
 
 ### Конфігурація
 
+Контрольні точки увімкнені за замовчуванням; їх контролює `fileCheckpointingEnabled`:
+
 ```json
 {
-  "autoCheckpoint": true
+  "fileCheckpointingEnabled": true
 }
 ```
 
@@ -2972,12 +2920,11 @@ Esc + Esc
 
 **Активація:**
 - Перемикання `Alt+T` (або `Option+T` на macOS) під час сесії
-- Встановіть змінну середовища `MAX_THINKING_TOKENS` для програмного контролю
+- Opus 4.7+, Sonnet 5+, Haiku 5.5 і Fable завжди використовують адаптивне міркування, тож фіксований бюджет `MAX_THINKING_TOKENS` до них не застосовується; глибину регулюйте через `/effort`
 
 ```bash
-# Enable extended thinking via environment variable
-export MAX_THINKING_TOKENS=50000
-claude -p "Should we use microservices or monolith?"
+# Control reasoning depth with the effort level
+/effort high
 ```
 
 **Переваги:**
@@ -2996,10 +2943,7 @@ User: Run tests in background
 
 Claude: Started task bg-1234
 
-/task list           # Show all tasks
-/task status bg-1234 # Check progress
-/task show bg-1234   # View output
-/task cancel bg-1234 # Cancel task
+/tasks               # View and manage background work (alias: /bashes)
 ```
 
 ### Режими дозволів
@@ -3011,8 +2955,8 @@ Claude: Started task bg-1234
 | **default** | Стандартні дозволи з запитами для чутливих дій | Загальна розробка |
 | **acceptEdits** | Автоматично приймати редагування файлів без підтвердження | Довірені робочі процеси редагування |
 | **plan** | Лише аналіз і планування, без модифікації файлів | Код-рев'ю, планування архітектури |
-| **auto** | Автоматично затверджувати безпечні дії, запитувати лише ризиковані | Збалансована автономія з безпекою |
-| **dontAsk** | Виконувати всі дії без запитів підтвердження | Досвідчені користувачі, автоматизація |
+| **auto** | Класифікатор затверджує безпечні дії та блокує ризиковані; запити повертаються лише після 3 блокувань поспіль або 20 загалом | Збалансована автономія з безпекою |
+| **dontAsk** | Автоматично відхиляє все, що потребує запиту; виконуються лише попередньо схвалені інструменти та читання | Закриті CI та скрипти |
 | **bypassPermissions** | Повний необмежений доступ, без перевірок безпеки | CI/CD-конвеєри, довірені скрипти |
 
 **Використання:**
@@ -3020,7 +2964,7 @@ Claude: Started task bg-1234
 claude --permission-mode plan          # Read-only analysis
 claude --permission-mode acceptEdits   # Auto-accept edits
 claude --permission-mode auto          # Auto-approve safe actions
-claude --permission-mode dontAsk       # No confirmation prompts
+claude --permission-mode dontAsk       # Pre-approved tools only; deny the rest
 ```
 
 ### Headless-режим (режим друку)
@@ -3081,13 +3025,7 @@ claude -r "Feature"    # Resume session by name/ID
 - `↑ / ↓` — Історія команд
 - `Ctrl + L` — Очистити екран
 
-**Багаторядковий ввід:**
-```bash
-User: \
-> Long complex prompt
-> spanning multiple lines
-> \end
-```
+**Багаторядковий ввід:** натисніть `\` + Enter, Option+Enter (macOS), Shift+Enter або Ctrl+J, щоб почати новий рядок. Термінатора `\end` не існує.
 
 ### Конфігурація
 
@@ -3095,23 +3033,15 @@ User: \
 
 ```json
 {
-  "planning": {
-    "autoEnter": true,
-    "requireApproval": true
-  },
-  "extendedThinking": {
-    "enabled": true,
-    "showThinkingProcess": true
-  },
-  "backgroundTasks": {
-    "enabled": true,
-    "maxConcurrentTasks": 5
-  },
+  "alwaysThinkingEnabled": true,
+  "showThinkingSummaries": true,
   "permissions": {
-    "mode": "default"
+    "defaultMode": "manual"
   }
 }
 ```
+
+Немає блоку `settings.json` для фонових завдань — функція керується змінною середовища `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS`, а паралельність — `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (за замовчуванням `20`).
 
 **Дивіться**: [09-advanced-features/](09-advanced-features/) для повного посібника
 
@@ -3126,10 +3056,25 @@ User: \
 
 ---
 
-*Останнє оновлення: квітень 2026*
-*Для Claude Haiku 4.5, Sonnet 4.6 та Opus 4.6*
+*Останнє оновлення: 15 серпня 2026*
+*Для Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5*
 *Тепер включає: хуки, контрольні точки, режим планування, розширене мислення, фонові завдання, режими дозволів (6 режимів), headless-режим, управління сесіями, авто-пам'ять, команди агентів, заплановані завдання, інтеграцію з Chrome, канали, голосовий ввід та комплектні навички*
 
 ---
-**Last Updated**: April 9, 2026
-**Claude Code Version**: 2.1.97
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/plugins/manifest-reference
+- https://code.claude.com/docs/en/plugins/create
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/settings-reference
+- https://code.claude.com/docs/en/interactive-mode
+- https://code.claude.com/docs/en/model-config
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/memory
+- https://code.claude.com/docs/en/tools-reference#task-tool-availability
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/sub-agents
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/hooks#userpromptexpansion

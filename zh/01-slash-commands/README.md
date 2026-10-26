@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Slash Commands 参考指南
@@ -18,17 +18,19 @@ Slash command 是你在 Claude 的交互式会话中用来控制行为的快捷�
 
 ## 内置命令速查
 
-Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以在 Claude Code 中输入 `/` 查看全部，也可以输入 `/` 后继续键入字母进行筛选。
+Claude Code 目前提供 55+ 个内置命令和约 20 个内置 Skills。你可以在 Claude Code 中输入 `/` 查看全部，也可以输入 `/` 后继续键入字母进行筛选。
 
 | 命令 | 作用 |
 |---------|---------|
 | `/add-dir <path>` | 添加工作目录 |
-| `/agents` | 管理 agent 配置 |
-| `/branch [name]` | 将当前对话分支到新会话（别名：`/fork`。注意：`/fork` 在 v2.1.77 中更名为 `/branch`） |
+| `/agents` | 已不再是可用命令：交互式向导已在 v2.1.198 中移除，且从 v2.1.281 起 `/agents` 不再出现在 `/` 菜单或 `/help` 中 — 输入它只会说明向导的去向。请让 Claude 创建或管理 subagent，或直接编辑 `.claude/agents/` 中的文件 |
+| `/branch [name]` | 切换到当前对话的一个副本，原对话保持不变 |
+| `/fork [prompt]` | 把当前对话复制到一个新的**后台会话**，你可以继续在这里工作；从这一刻起两者互相独立，副本会在 `claude agents` 里占一行（v2.1.212+） |
+| `/subtask <task>` | 派生一个**forked subagent**，它继承完整对话并去执行该任务，你可以继续工作；任务完成后结果会返回到本对话（v2.1.212+） |
 | `/btw <question>` | 额外问题，不写入历史 |
 | `/chrome` | 配置 Chrome 浏览器集成 |
 | `/clear` | 清空对话（别名：`/reset`、`/new`） |
-| `/color [color|default]` | 设置提示栏颜色 |
+| `/color [color\|default]` | 设置提示栏颜色 |
 | `/compact [instructions]` | 压缩对话，可附带聚焦指令 |
 | `/config` | 打开设置（别名：`/settings`） |
 | `/context` | 用彩色网格可视化上下文占用 |
@@ -37,12 +39,12 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/desktop` | 继续在桌面应用中处理（别名：`/app`） |
 | `/diff` | 查看未提交更改的交互式 diff |
 | `/doctor` | 检查安装健康状态 |
-| `/effort [low|medium|high|max|auto]` | 设置推理强度；`max` 需要 Opus 4.6 |
+| `/effort [low\|medium\|high\|max\|auto]` | 设置推理强度；`max` 需要 Opus 4.6 |
 | `/exit` | 退出 REPL（别名：`/quit`） |
 | `/export [filename]` | 将当前对话导出为文件或剪贴板内容 |
 | `/extra-usage` | 配置额外用量以应对速率限制 |
-| `/fast [on|off]` | 切换快速模式 |
-| `/feedback` | 提交反馈（别名：`/bug`） |
+| `/fast [on\|off]` | 切换快速模式 |
+| `/feedback` | 提交反馈 |
 | `/help` | 显示帮助 |
 | `/hooks` | 查看 hook 配置 |
 | `/ide` | 管理 IDE 集成 |
@@ -57,6 +59,7 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/memory` | 编辑 `CLAUDE.md`，切换自动记忆 |
 | `/mobile` | 生成移动端扫码二维码（别名：`/ios`、`/android`） |
 | `/model [model]` | 选择模型，并可用左右箭头调整 effort |
+| `/output-style [name]` | 列出并切换 output style（v2.1.91 移除后，于 v2.1.269 重新加回）。不带参数时列出所有 style 并标记当前使用的那个。在 headless 和 Remote Control 会话中均可使用；选择结果保存到 `.claude/settings.local.json` |
 | `/passes` | 分享一周免费 Claude Code 使用权 |
 | `/permissions` | 查看或更新权限（别名：`/allowed-tools`） |
 | `/plan [description]` | 进入规划模式 |
@@ -64,12 +67,12 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/pr-comments [PR]` | 获取 GitHub PR 评论 |
 | `/privacy-settings` | 隐私设置（仅 Pro/Max） |
 | `/release-notes` | 查看更新日志 |
-| `/reload-plugins` | 重新加载当前插件 |
+| `/reload-plugins` | 重新加载当前插件。自 v2.1.221 起，大多数安装会立即生效，只有当安装摘要提示 `Run /reload-plugins to activate.` 时才需要执行 |
 | `/remote-control` | 从 claude.ai 进行远程控制（别名：`/rc`） |
 | `/remote-env` | 配置默认远程环境 |
 | `/rename [name]` | 重命名会话 |
 | `/resume [session]` | 恢复对话（别名：`/continue`） |
-| `/review` | **已弃用**，请改用 `code-review` 插件 |
+| `/review [low\|medium\|high\|xhigh\|max\|ultra] [--fix] [--comment] [pr#\|branch\|path]` | `/code-review` 的别名（v2.1.223）：审查当前 diff，或你传入的 PR 编号、分支、路径 —— 例如 `/review 1234`。接受相同的 effort 级别和标志。未指定级别时，复用你上次输入的 `low`–`max` 级别 |
 | `/rewind` | 回退对话和/或代码（别名：`/checkpoint`） |
 | `/sandbox` | 切换沙盒模式 |
 | `/schedule [description]` | 创建/管理定时任务 |
@@ -92,23 +95,20 @@ Claude Code 目前提供 55+ 个内置命令和 5 个内置 Skills。你可以�
 | `/batch <instruction>` | 使用 worktree 编排大规模并行修改 |
 | `/claude-api` | 加载 Claude API 参考，便于为项目所用语言编写代码 |
 | `/debug [description]` | 启用调试日志 |
-| `/loop [interval] <prompt>` | 按固定间隔重复运行提示词 |
+| `/loop [interval] [prompt]` | 按固定间隔重复运行提示词 |
 | `/simplify [focus]` | 审查改动文件的代码质量 |
 
 ### 已弃用命令
 
 | 命令 | 状态 |
 |---------|--------|
-| `/review` | 已弃用，已被 `code-review` 插件替代 |
-| `/output-style` | 自 v2.1.73 起弃用 |
-| `/fork` | 已重命名为 `/branch`（别名仍可用，v2.1.77） |
 | `/vim` | 自 v2.1.92 起移除；改用 `/config → Editor mode` |
 
 ### 最近变化
 
-- `/fork` 已更名为 `/branch`，但保留 `/fork` 作为别名（v2.1.77）
-- `/output-style` 已弃用（v2.1.73）
-- `/review` 已弃用，推荐改用 `code-review` 插件
+- `/fork` 与 `/subtask` 在 **v2.1.212** 互换了角色。`/fork` 现在是把对话复制到一个独立的后台会话；原来的 forked subagent 行为转移到了新命令 `/subtask`。历史：v2.1.77–v2.1.161 期间 `/fork` 是 `/branch` 的别名；v2.1.161–v2.1.211 期间它启动 forked subagent（即现在 `/subtask` 的行为）。关闭 agent view 时 `/subtask` 不可用，`/fork` 仍保留 forked subagent 行为
+- `/output-style` 曾被弃用（v2.1.73）并于 v2.1.91 移除，随后**在 v2.1.269 重新加回** — 在 v2.1.278 中它又是一个可用命令，并且在 headless 和 Remote Control 会话中都能工作。output styles 同样仍可通过 `/config` → Output style 或 `outputStyle` 设置使用
+- `/review` 成为 `/code-review` 的完整别名 —— 目标、effort 级别和标志完全相同（v2.1.223）。历史：它在 v2.1.186 首次迁移到 `/code-review medium` 引擎，但当时仅支持 PR
 - 新增 `/effort`，其中 `max` 级别需要 Opus 4.6
 - 新增 `/voice`，用于按住说话语音输入
 - 新增 `/schedule`，用于创建和管理定时任务
@@ -180,7 +180,7 @@ description: 这个命令的作用，以及何时使用它
 | 字段 | 作用 | 默认值 |
 |-------|---------|---------|
 | `name` | 命令名（会变成 `/name`） | 目录名 |
-| `description` | 简短说明，帮助 Claude 判断何时使用 | 第一段 |
+| `description` | 简短说明，帮助 Claude 判断何时使用 | 第一个非空行 |
 | `argument-hint` | 自动补全时显示的参数提示 | 无 |
 | `allowed-tools` | 命令可无权限使用的工具 | 继承 |
 | `model` | 指定要使用的模型 | 继承 |
@@ -188,7 +188,7 @@ description: 这个命令的作用，以及何时使用它
 | `user-invocable` | 若为 `false`，不会出现在 `/` 菜单中 | `true` |
 | `context` | 设为 `fork` 时，在隔离 subagent 中运行 | 无 |
 | `agent` | `context: fork` 时使用的 agent 类型 | `general-purpose` |
-| `hooks` | Skill 范围内的 hooks（PreToolUse、PostToolUse、Stop） | 无 |
+| `hooks` | Skill 运行时注册的 hooks（支持任意 hook 事件；注册后在会话剩余时间内持续生效） | 无 |
 
 ### 参数
 
@@ -222,7 +222,9 @@ description: 按优先级审查 PR
 
 ### 用 Shell 命令注入动态上下文
 
-在 prompt 发送前，可用 `!` 命令先执行 shell 命令：
+在 prompt 发送前，可用 `` !`command` `` 先执行 shell 命令：
+
+> **注意（v2.1.299）**：`UserPromptSubmit` hooks 会在命令展开之前运行，因此阻止该 prompt 的 hook 也会阻止这些 `!` 命令运行。
 
 ```yaml
 ---
@@ -290,6 +292,8 @@ MCP servers 可以把 prompt 暴露成 slash command：
 - `mcp__github` - 访问整个 GitHub MCP server
 - `mcp__github__*` - 通配符访问全部工具
 - `mcp__github__get_issue` - 访问某个特定工具
+
+> **v2.1.299+：** 规则只作用于它所指名的 server —— `mcp__github` 不再匹配名为 `github__x` 或 `github_` 的 server。对于规范化名称中包含 `__` 的 server，请写成 `mcp__<完整规范化名称>__*`（subagent 的 `tools:` 列表同样适用）。
 
 ## 命令架构
 
@@ -548,8 +552,18 @@ allowed-tools: Bash(npm *), Bash(git *)
 
 ---
 
-**最后更新**: 2026 年 4 月 9 日
-**Claude Code 版本**: 2.1.97
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/output-styles
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.281
+- https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents
+- https://code.claude.com/docs/en/permissions#mcp
+- https://code.claude.com/docs/en/changelog#2-1-299
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/skills
+**兼容模型**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5
 
 ---
 

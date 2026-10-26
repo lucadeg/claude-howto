@@ -101,14 +101,14 @@ graph TD
 
 | ステップ | 機能 | 複雑度 | 時間 | レベル | 依存 | 学ぶ理由 | 主な利点 |
 |------|---------|-----------|------|-------|--------------|----------------|--------------|
-| **1** | [スラッシュコマンド](01-slash-commands/) | ⭐ 初級 | 30 分 | レベル 1 | なし | すぐ得られる生産性向上（組み込み 55 個 + バンドル 5 スキル） | 即時自動化、チーム標準化 |
+| **1** | [スラッシュコマンド](01-slash-commands/) | ⭐ 初級 | 30 分 | レベル 1 | なし | すぐ得られる生産性向上（組み込み 55 個 + バンドルスキル） | 即時自動化、チーム標準化 |
 | **2** | [メモリ](02-memory/) | ⭐⭐ 初級+ | 45 分 | レベル 1 | なし | 全機能の基礎 | 永続コンテキスト、設定保持 |
 | **3** | [チェックポイント](08-checkpoints/) | ⭐⭐ 中級 | 45 分 | レベル 1 | セッション管理 | 安全な探索 | 実験、復旧 |
 | **4** | [CLI 基礎](10-cli/) | ⭐⭐ 初級+ | 30 分 | レベル 1 | なし | コア CLI の使い方 | 対話モード・印字モード |
 | **5** | [スキル](03-skills/) | ⭐⭐ 中級 | 1 時間 | レベル 2 | スラッシュコマンド | 自動的な専門性 | 再利用、一貫性 |
-| **6** | [フック](06-hooks/) | ⭐⭐ 中級 | 1 時間 | レベル 2 | ツール、コマンド | ワークフロー自動化（28 イベント、5 種類） | 検証、品質ゲート |
+| **6** | [フック](06-hooks/) | ⭐⭐ 中級 | 1 時間 | レベル 2 | ツール、コマンド | ワークフロー自動化（33 イベント、5 種類） | 検証、品質ゲート |
 | **7** | [MCP](05-mcp/) | ⭐⭐⭐ 中級+ | 1 時間 | レベル 2 | 設定 | ライブデータアクセス | リアルタイム連携、API |
-| **8** | [サブエージェント](04-subagents/) | ⭐⭐⭐ 中級+ | 1.5 時間 | レベル 2 | メモリ、コマンド | 複雑タスクの処理（Bash 含む組み込み 6 個） | 委譲、専門性 |
+| **8** | [サブエージェント](04-subagents/) | ⭐⭐⭐ 中級+ | 1.5 時間 | レベル 2 | メモリ、コマンド | 複雑タスクの処理（Explore と Plan を含む組み込み 6 個） | 委譲、専門性 |
 | **9** | [高度な機能](09-advanced-features/) | ⭐⭐⭐⭐⭐ 上級 | 2〜3 時間 | レベル 3 | これまでの全機能 | パワーユーザー向けツール | プランニング、Auto Mode、チャンネル、音声入力、権限 |
 | **10** | [プラグイン](07-plugins/) | ⭐⭐⭐⭐ 上級 | 2 時間 | レベル 3 | これまでの全機能 | 完全なソリューション | チームオンボーディング、配布 |
 | **11** | [CLI マスタリー](10-cli/) | ⭐⭐⭐ 上級 | 1 時間 | レベル 3 | 推奨：これまでの全機能 | コマンドライン利用の習熟 | スクリプト、CI/CD、自動化 |
@@ -239,7 +239,7 @@ cat error.log | claude -p "explain this error"
 
 #### 達成事項
 ✅ YAML フロントマター（`effort` と `shell` フィールドを含む）で専門機能を自動起動
-✅ 28 個のフックイベントにまたがるイベント駆動自動化を構築
+✅ 33 個のフックイベントにまたがるイベント駆動自動化を構築
 ✅ 5 種類のフック（command、http、mcp_tool、prompt、agent）を活用
 ✅ コード品質基準を強制
 ✅ ワークフロー向けカスタムフックを作成
@@ -248,7 +248,7 @@ cat error.log | claude -p "explain this error"
 
 ```bash
 # 演習 1: スキルをインストール
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 演習 2: フックをセットアップ
 mkdir -p ~/.claude/hooks
@@ -306,8 +306,7 @@ chmod +x ~/.claude/hooks/pre-tool-check.sh
 
 ```bash
 # 演習 1: GitHub MCP をセットアップ
-export GITHUB_TOKEN="your_github_token"
-claude mcp add github -- npx -y @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 
 # 演習 2: MCP 統合をテスト
 # Claude Code で: /mcp__github__list_prs
@@ -374,7 +373,7 @@ cp 04-subagents/*.md .claude/agents/
 ✅ バックグラウンドタスク管理
 ✅ 学習済み設定のための Auto Memory
 ✅ バックグラウンド安全性分類器付きの Auto Mode
-✅ 構造化マルチセッションワークフロー向けチャンネル
+✅ 実行中のセッションにイベント（CI 結果、チャットメッセージ、Webhook）をプッシュするチャンネル
 ✅ ハンズフリー操作のための音声入力
 ✅ リモート操作、デスクトップアプリ、Web セッション
 ✅ マルチエージェント協調のための Agent Teams
@@ -405,15 +404,15 @@ claude --permission-mode auto "implement the feature"
 claude --permission-mode auto "implement user settings page"
 
 # 演習 6: Agent Teams を有効化
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 # Claude にこう依頼: "Implement feature X using a team approach"
 
 # 演習 7: スケジュールタスク
 /loop 5m /check-status
-# あるいは永続的なスケジュールタスクには CronCreate を使う
+# タスクはセッション単位。永続的なスケジュールには Routines または Desktop のスケジュールタスクを使う
 
-# 演習 8: マルチセッションワークフローのチャンネル
-# セッションをまたぐ作業をチャンネルで整理する
+# 演習 8: チャンネル（リサーチプレビュー）
+# チャンネルは実行中のセッションにイベントをプッシュする MCP サーバである
 
 # 演習 9: 音声入力
 # ハンズフリーで Claude Code とやり取りするため音声入力を使う
@@ -425,7 +424,7 @@ export CLAUDE_AGENT_TEAMS=1
 - [ ] Alt+T / Option+T で拡張思考を切り替えた
 - [ ] バックグラウンド安全性分類器付き auto モードを使った
 - [ ] 長時間処理でバックグラウンドタスクを使った
-- [ ] マルチセッションワークフローのためチャンネルを試した
+- [ ] 外部イベントをセッションにプッシュするチャンネルを試した
 - [ ] ハンズフリー入力のため音声入力を試した
 - [ ] リモート操作、デスクトップアプリ、Web セッションを理解している
 - [ ] 協調作業のため Agent Teams を有効化して使った
@@ -456,7 +455,7 @@ export CLAUDE_AGENT_TEAMS=1
 
 ```bash
 # 演習 1: 完全プラグインをインストール
-# Claude Code で: /plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review  # リポジトリのルートから
 
 # 演習 2: CI/CD のための印字モード
 claude -p "Run all tests and generate report"
@@ -702,13 +701,13 @@ done
 
 1. **チームドキュメントを作成** — チームの Claude Code セットアップを文書化
 2. **カスタムプラグインを構築** — チームのワークフローをパッケージ化
-3. **リモートコントロールを試す** — 外部ツールから Claude Code セッションをプログラムで制御
+3. **リモートコントロールを試す** — ローカルの Claude Code セッションをスマートフォン、ブラウザ、または Claude アプリから継続
 4. **Web セッションを試す** — リモート開発のためブラウザベースインターフェースで Claude Code を使う
 5. **デスクトップアプリを使う** — ネイティブデスクトップアプリで Claude Code 機能を利用
 6. **Auto Mode を使う** — バックグラウンド安全性分類器付きで Claude を自律的に動かす
 7. **Auto Memory を活用** — Claude に好みを時間とともに自動学習させる
 8. **Agent Teams をセットアップ** — 複雑で多面的なタスクで複数エージェントを協調させる
-9. **チャンネルを使う** — 構造化マルチセッションワークフローで作業を整理
+9. **チャンネルを使う** — 実行中のセッションにイベント（CI 結果、チャットメッセージ、Webhook）をプッシュする MCP サーバを接続
 10. **音声入力を試す** — ハンズフリー音声入力で Claude Code とやり取りする
 11. **スケジュールタスクを使う** — `/loop` や cron ツールで反復チェックを自動化
 12. **例をコントリビュート** — コミュニティと共有する
@@ -742,13 +741,21 @@ done
 
 ---
 
-**最終更新**：2026 年 4 月 24 日
-**Claude Code バージョン**：2.1.119
+**最終更新**：2026 年 10 月 18 日
+**Claude Code バージョン**：2.1.302
 **情報源**：
 - https://code.claude.com/docs/en/overview
 - https://code.claude.com/docs/en/hooks
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.119
-**互換モデル**：Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/channels
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/sub-agents
+**互換モデル**：Claude Fable 5、Claude Opus 5、Claude Sonnet 5、Claude Sonnet 4.6、Claude Opus 4.8、Claude Haiku 4.5
 **メンテナンス**：Claude How-To Contributors
 **ライセンス**：教育目的、自由に使用・改変可能
 

@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Claude Code 插件
@@ -87,8 +87,10 @@ my-plugin/
 │   ├── specialist-2.md
 │   └── configs/
 ├── skills/               # 带有 SKILL.md 文件的技能
-│   ├── skill-1.md
-│   └── skill-2.md
+│   ├── skill-1/
+│   │   └── SKILL.md
+│   └── skill-2/
+│       └── SKILL.md
 ├── hooks/                # hooks.json 中的事件处理器
 │   └── hooks.json
 ├── .mcp.json             # MCP server 配置
@@ -187,7 +189,7 @@ my-plugin/
 |------|------|---------------|----------|
 | `pyright-lsp` | Python | `pyright-langserver` | `pip install pyright` |
 | `typescript-lsp` | TypeScript/JavaScript | `typescript-language-server` | `npm install -g typescript-language-server typescript` |
-| `rust-lsp` | Rust | `rust-analyzer` | 使用 `rustup component add rust-analyzer` 安装 |
+| `rust-analyzer-lsp` | Rust | `rust-analyzer` | 使用 `rustup component add rust-analyzer` 安装 |
 
 #### LSP 能力
 
@@ -208,10 +210,14 @@ my-plugin/
   "version": "1.0.0",
   "userConfig": {
     "apiKey": {
+      "type": "string",
+      "title": "API key",
       "description": "服务的 API key",
       "sensitive": true
     },
     "region": {
+      "type": "string",
+      "title": "Region",
       "description": "部署区域",
       "default": "us-east-1"
     }
@@ -228,43 +234,54 @@ my-plugin/
   "hooks": {
     "PostToolUse": [
       {
-        "command": "node ${CLAUDE_PLUGIN_DATA}/track-usage.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/track-usage.js \"${CLAUDE_PLUGIN_DATA}\"/usage.json"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-插件安装时会自动创建该目录。存放在这里的文件会一直保留，直到插件被卸载。
+该目录（`~/.claude/plugins/data/<id>/`）在首次被引用时创建，并在插件更新后保留。当你从插件安装的最后一个位置卸载插件时，该目录会被删除（除非传入 `--keep-data`）。
 
 ## 通过设置文件内联定义插件（`source: 'settings'`）（v2.1.80+）
 
-插件可以在设置文件中以内联市场条目的方式定义，使用 `source: 'settings'` 字段即可。这允许你直接嵌入插件定义，而不必单独准备仓库或市场：
+插件可以在设置文件中以内联市场条目的方式定义，使用 `source: 'settings'` 字段即可。这允许你直接嵌入插件定义，而不必单独准备仓库或市场。请在 `extraKnownMarketplaces.<name>.source` 下声明，`name` 必须与市场键名一致，其中的插件必须引用 GitHub 或 npm 等外部源（相对路径会被拒绝）：
 
 ```json
 {
-  "pluginMarketplaces": [
-    {
-      "name": "inline-tools",
-      "source": "settings",
-      "plugins": [
-        {
-          "name": "quick-lint",
-          "source": "./local-plugins/quick-lint"
-        }
-      ]
+  "extraKnownMarketplaces": {
+    "inline-tools": {
+      "source": {
+        "source": "settings",
+        "name": "inline-tools",
+        "plugins": [
+          {
+            "name": "quick-lint",
+            "source": {
+              "source": "github",
+              "repo": "my-org/quick-lint"
+            }
+          }
+        ]
+      }
     }
-  ]
+  }
 }
 ```
 
 ## 插件设置
 
-插件可以提供一个 `settings.json` 文件来定义默认配置。目前支持 `agent` 键，用来指定插件的主线程 agent：
+插件可以提供一个 `settings.json` 文件来定义默认配置。生效的键有两个：`agent` 和 `subagentStatusLine`，其他键都会被丢弃。`agent` 填写插件中某个 agent 的名称，并将其作为主线程运行：
 
 ```json
 {
-  "agent": "agents/specialist-1.md"
+  "agent": "specialist-1"
 }
 ```
 
@@ -323,7 +340,7 @@ description: 启动包含安全和测试检查的完整 PR 审查
 ---
 name: security-reviewer
 description: 面向安全的代码审查
-tools: read, grep, diff
+tools: Read, Grep, Bash
 ---
 
 # Security Reviewer
@@ -338,7 +355,7 @@ tools: read, grep, diff
 **安装：**
 
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # 结果：
 # ✅ 已安装 3 个 slash commands
@@ -364,13 +381,10 @@ devops-automation/
 │   ├── incident-commander.md
 │   └── alert-analyzer.md
 ├── mcp/
-│   ├── github-config.json
-│   ├── kubernetes-config.json
-│   └── prometheus-config.json
+│   └── kubernetes-config.json
 ├── hooks/
 │   ├── pre-deploy.js
-│   ├── post-deploy.js
-│   └── on-error.js
+│   └── post-deploy.js
 └── scripts/
     ├── deploy.sh
     ├── rollback.sh
@@ -393,8 +407,7 @@ documentation/
 │   ├── code-commentator.md
 │   └── example-generator.md
 ├── mcp/
-│   ├── github-docs-config.json
-│   └── slack-announce-config.json
+│   └── github-docs-config.json
 └── templates/
     ├── api-endpoint.md
     ├── function-docs.md
@@ -442,7 +455,11 @@ graph TB
 |------|------|
 | `extraKnownMarketplaces` | 在默认列表之外添加额外的市场源 |
 | `strictKnownMarketplaces` | 控制允许用户添加哪些市场 |
-| `deniedPlugins` | 管理员维护的黑名单，阻止特定插件被安装 |
+| `enabledPlugins`（设为 `false`） | 阻止特定插件：在 managed settings 中设置 `"enabledPlugins": { "<plugin>@<marketplace>": false }`，即可在所有作用域阻止安装，并在市场中隐藏该插件 |
+
+> **更友好的别名（v2.1.232）**：`additionalMarketplaces` 被接受为 `extraKnownMarketplaces` 的别名，`allowedMarketplaces` 为 `strictKnownMarketplaces` 的别名。官方 settings 参考页面已在 [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases) 中列出这两个别名。旧版本会忽略别名，因此继续使用规范键名是安全的。
+
+> **owner 通配符（v2.1.223+）**：`"owner/*"` 条目可允许或阻止某个 GitHub owner 名下的所有市场仓库。**仅在 `strictKnownMarketplaces` 和 `blockedMarketplaces` 中被接受。** 在其他出现 `github` 源的地方 —— 包括 `extraKnownMarketplaces` 和 `/plugin marketplace add` —— `repo` 的值必须指向单个仓库。
 
 ### 额外的市场特性
 
@@ -457,14 +474,14 @@ graph TB
 ```json
 {
   "name": "my-team-plugins",
-  "owner": "my-org",
+  "owner": { "name": "my-org" },
   "plugins": [
     {
       "name": "code-standards",
       "source": "./plugins/code-standards",
       "description": "强制执行团队编码规范",
       "version": "1.2.0",
-      "author": "platform-team"
+      "author": { "name": "platform-team" }
     },
     {
       "name": "deploy-helper",
@@ -482,13 +499,13 @@ graph TB
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `name` | 是 | 使用 kebab-case 的市场名称 |
-| `owner` | 是 | 维护该市场的组织或用户 |
+| `owner` | 是 | 维护该市场的组织或用户：包含必填 `name` 的对象（`email`、`url` 可选） |
 | `plugins` | 是 | 插件条目数组 |
 | `plugins[].name` | 是 | 插件名称（kebab-case） |
 | `plugins[].source` | 是 | 插件来源（路径字符串或来源对象） |
 | `plugins[].description` | 否 | 插件的简要描述 |
 | `plugins[].version` | 否 | 语义化版本字符串 |
-| `plugins[].author` | 否 | 插件作者名称 |
+| `plugins[].author` | 否 | 插件作者：包含必填 `name` 的对象（`email`、`url` 可选） |
 
 ### 插件来源类型
 
@@ -501,7 +518,6 @@ graph TB
 | **Git URL** | `{ "source": "url", "url": "..." }` | `{ "source": "url", "url": "https://git.internal/plugin.git" }` |
 | **Git 子目录** | `{ "source": "git-subdir", "url": "...", "path": "..." }` | `{ "source": "git-subdir", "url": "https://github.com/org/monorepo.git", "path": "packages/plugin" }` |
 | **npm** | `{ "source": "npm", "package": "..." }` | `{ "source": "npm", "package": "@acme/claude-plugin", "version": "^2.0" }` |
-| **pip** | `{ "source": "pip", "package": "..." }` | `{ "source": "pip", "package": "claude-data-plugin", "version": ">=1.0" }` |
 
 GitHub 和 git 来源支持可选的 `ref`（分支/标签）和 `sha`（提交哈希）字段用于版本锁定。
 
@@ -520,7 +536,7 @@ GitHub 和 git 来源支持可选的 `ref`（分支/标签）和 `sha`（提交�
 
 **私有仓库**：可以通过 git credential helper 或环境令牌支持。用户必须有该仓库的读取权限。
 
-**官方市场提交**：可以将插件提交到 Anthropic 审核维护的市场，以便更广泛分发。
+**提交到 Anthropic 目录**：通过开发者门户 [claude.ai/directory/manage](https://claude.ai/directory/manage) 将插件提交到 Anthropic 的目录，以便更广泛分发。Anthropic 官方市场 `claude-plugins-official` 不通过目录门户接受提交。
 
 ### 严格模式
 
@@ -537,13 +553,13 @@ GitHub 和 git 来源支持可选的 `ref`（分支/标签）和 `sha`（提交�
 |----|------|
 | 未设置 | 无限制，用户可以添加任意市场 |
 | 空数组 `[]` | 锁定模式，不允许任何市场 |
-| 模式数组 | 白名单模式，只允许匹配的市场被添加 |
+| 源对象数组 | 白名单模式，只允许匹配的市场被添加 |
 
 ```json
 {
   "strictKnownMarketplaces": [
-    "my-org/*",
-    "github.com/trusted-vendor/*"
+    { "source": "github", "repo": "my-org/*" },
+    { "source": "github", "repo": "trusted-vendor/*" }
   ]
 }
 ```
@@ -591,7 +607,7 @@ claude plugin uninstall <name>               # 删除插件
 claude plugin list                           # 列出已安装插件
 claude plugin enable <name>                  # 启用已禁用的插件
 claude plugin disable <name>                 # 禁用插件
-claude plugin validate                       # 验证插件结构
+claude plugin validate <path>                # 验证 <path> 处的插件结构
 ```
 
 ## 安装方式
@@ -602,6 +618,15 @@ claude plugin validate                       # 验证插件结构
 # 或通过 CLI：
 claude plugin install plugin-name@marketplace-name
 ```
+
+**是否立即生效？** 自 **v2.1.221** 起通常会立即生效 —— 请查看安装摘要的最后一行：
+
+| 安装摘要显示 | 含义 |
+|---|---|
+| `Plugin is now active.` | Claude Code 已在安装过程中激活该插件，无需其他操作。 |
+| `Run /reload-plugins to activate.` | 插件已安装但尚未生效 —— 要么激活会使 prompt cache 失效，要么激活尝试失败。 |
+
+在 v2.1.221 之前，任何安装都要等到你运行 `/reload-plugins` 或重启后才会在当前会话中生效。
 
 ### 启用 / 禁用（自动检测作用域）
 ```bash
@@ -618,7 +643,9 @@ claude --plugin-dir ./plugin-a --plugin-dir ./plugin-b
 
 ### 从 Git 仓库安装
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # 将 GitHub 仓库添加为市场
+/plugin install plugin-name@marketplace-name             # 然后从该市场安装插件
+/plugin install plugin-name --marketplace username/repo  # 或一步完成两者（v2.1.275+）
 ```
 
 ## 何时创建插件
@@ -683,22 +710,27 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 | 设置 | 说明 |
 |------|------|
 | `enabledPlugins` | 默认启用的插件白名单 |
-| `deniedPlugins` | 不允许安装的插件黑名单 |
+| `enabledPlugins`（设为 `false`） | 阻止特定插件：在 managed settings 中设置 `"enabledPlugins": { "<plugin>@<marketplace>": false }`，即可在所有作用域阻止安装，并在市场中隐藏该插件 |
 | `extraKnownMarketplaces` | 在默认列表之外添加额外市场源 |
 | `strictKnownMarketplaces` | 限制用户允许添加的市场 |
-| `allowedChannelPlugins` | 控制每个发布渠道允许使用哪些插件 |
+| `allowedChannelPlugins` | 允许向会话推送消息的 [channel](https://code.claude.com/docs/en/channels) 插件白名单（每个条目包含 `marketplace` 和 `plugin`） |
+
+> **更友好的别名（v2.1.232）**：`additionalMarketplaces` 被接受为 `extraKnownMarketplaces` 的别名，`allowedMarketplaces` 为 `strictKnownMarketplaces` 的别名。官方 settings 参考页面已在 [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases) 中列出这两个别名。旧版本会忽略别名，因此继续使用规范键名是安全的。
+
+> **owner 通配符（v2.1.223+）**：`"owner/*"` 条目可允许或阻止某个 GitHub owner 名下的所有市场仓库。**仅在 `strictKnownMarketplaces` 和 `blockedMarketplaces` 中被接受。** 在其他出现 `github` 源的地方 —— 包括 `extraKnownMarketplaces` 和 `/plugin marketplace add` —— `repo` 的值必须指向单个仓库。
 
 这些设置可以通过托管配置文件应用到组织级别，并且优先于用户级设置。
 
 ## 插件安全
 
-插件 subagents 运行在受限沙箱中。以下 frontmatter 键在插件 subagent 定义中**不允许**使用：
+插件 subagents 会**忽略**以下 frontmatter 键（agent 仍会加载，但这些键不起作用）：
 
 - `hooks` - subagents 不能注册事件处理器
 - `mcpServers` - subagents 不能配置 MCP servers
 - `permissionMode` - subagents 不能覆盖权限模型
+- `initialPrompt` - 插件 agents 不能自动提交第一条提示
 
-这可以确保插件不会越权，也不会修改主机环境的作用范围。
+agent 文件本身无法添加 hooks 或 MCP servers；请改为以插件级 hooks 和 MCP servers 的形式提供。
 
 ## 发布插件
 
@@ -715,7 +747,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 **示例提交：**
 
-```markdown
+````markdown
 # PR 审查插件
 
 ## 描述
@@ -729,7 +761,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 ## 安装
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ## 功能
@@ -747,10 +779,10 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 ```
 
 ## 要求
-- Claude Code 1.0+
+- Claude Code 2.1+
 - GitHub 访问权限
 - CodeQL（可选）
-```
+````
 
 ## 插件 vs 手动配置
 
@@ -764,7 +796,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 **使用插件（2 分钟）：**
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # ✅ 一切都已安装并配置
 # ✅ 可以立即使用
 # ✅ 团队可以复现完全相同的设置
@@ -800,15 +832,12 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 ### 从市场安装
 
-1. **浏览可用插件：**
+1. **浏览可用插件**（**Discover** 标签页列出你的市场中的插件；`/plugin list` 只显示已安装的插件）：
    ```bash
-   /plugin list
+   /plugin
    ```
 
-2. **查看插件详情：**
-   ```bash
-   /plugin info plugin-name
-   ```
+2. **查看插件详情：** 在 **Discover** 标签页中选择插件即可打开详情。（`claude plugin details plugin-name` 仅在插件已加载时可用：已安装，或通过 `--plugin-dir` 传入。）
 
 3. **安装插件：**
    ```bash
@@ -818,25 +847,32 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 ### 从本地路径安装
 
 ```bash
-/plugin install ./path/to/plugin-directory
+# /plugin install 需要 name@marketplace；传入路径会报 "marketplace not found"
+claude --plugin-dir ./path/to/plugin-directory
 ```
 
 ### 从 GitHub 安装
 
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # 将 GitHub 仓库添加为市场
+/plugin install plugin-name@marketplace-name             # 然后从该市场安装插件
+/plugin install plugin-name --marketplace username/repo  # 或一步完成两者（v2.1.275+）
 ```
 
 ### 列出已安装插件
 
 ```bash
-/plugin list --installed
+/plugin list             # 所有已安装插件
+/plugin list --enabled   # 仅已启用插件
+/plugin list --disabled  # 仅已禁用插件
 ```
 
 ### 更新插件
 
+使用 CLI 形式 —— 这是 [`plugin update`](https://code.claude.com/docs/en/plugins-reference) 中记录的形式，也是有可用更新时 Claude Code 自身提示你使用的形式：
+
 ```bash
-/plugin update plugin-name
+claude plugin update plugin-name
 ```
 
 ### 禁用 / 启用插件
@@ -890,7 +926,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 ## 故障排查
 
 ### 插件无法安装
-- 检查 Claude Code 版本兼容性：`/version`
+- 检查 Claude Code 版本兼容性：`claude --version`
 - 用 JSON 校验器验证 `plugin.json` 语法
 - 检查网络连接（远程插件）
 - 检查权限：`ls -la plugin/`
@@ -899,18 +935,18 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 - 验证 `plugin.json` 中的路径与实际目录结构一致
 - 检查文件权限：`chmod +x scripts/`
 - 检查组件文件语法
-- 查看日志：`/plugin debug plugin-name`
+- 查看组件清单：`claude plugin details plugin-name`
 
 ### MCP 连接失败
 - 确认环境变量已正确设置
 - 检查 MCP server 的安装和健康状态
-- 使用 `/mcp test` 独立测试 MCP 连接
+- 使用 `/mcp` 查看 MCP 服务器状态
 - 查看 `mcp/` 目录中的 MCP 配置
 
 ### 安装后命令不可用
-- 确认插件已成功安装：`/plugin list --installed`
-- 检查插件是否已启用：`/plugin status plugin-name`
-- 重启 Claude Code：`exit` 后重新打开
+- 确认插件已成功安装：`/plugin list`
+- 检查插件是否已启用：`/plugin list --enabled`
+- 确认是否已生效 —— 参见[安装方式](#安装方式)中的安装摘要说明：`Plugin is now active.` 表示无需其他操作，`Run /reload-plugins to activate.` 表示运行该命令即可（无需重启）
 - 检查是否与现有命令冲突
 
 ### Hook 执行问题
@@ -928,3 +964,19 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 - [MCP Server 参考](https://modelcontextprotocol.io/)
 - [Subagent 配置指南](../04-subagents/README.md)
 - [Hook 系统参考](../06-hooks/README.md)
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/discover-plugins
+- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
+- https://code.claude.com/docs/en/plugins/marketplace-reference
+- https://code.claude.com/docs/en/plugins/components
+- https://code.claude.com/docs/en/plugins/publish
+- https://code.claude.com/docs/en/plugins/overview

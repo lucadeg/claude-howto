@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Посібник з навичок агента
@@ -137,10 +137,12 @@ Provide clear, step-by-step guidance for Claude.
 Show concrete examples of using this Skill.
 ```
 
-### Обов'язкові поля
+### Рекомендовані поля
 
-- **name**: тільки малі літери, цифри, дефіси (макс. 64 символи). Не може містити "anthropic" або "claude".
-- **description**: що навичка робить І коли її використовувати (макс. 1024 символи). Це критично для того, щоб Claude знав, коли активувати навичку.
+- **description** (рекомендовано): що навичка робить І коли її використовувати. Якщо поле пропущено, Claude Code бере перший непорожній рядок markdown-вмісту. Об'єднаний текст `description` + `when_to_use` обрізається до **1 536 символів** у переліку навичок (налаштовується через `skillListingMaxDescChars`). Саме за цим текстом Claude визначає, коли активувати навичку.
+- **name** (необов'язкове): за замовчуванням дорівнює **імені каталогу** навички. Якщо вказане, задає відображувану назву — тільки малі літери, цифри, дефіси (макс. 64 символи) — це рекомендована, переносна форма (обов'язкова для claude.ai та Skills API). Сам Claude Code (v2.1.299+) пропускає навичку чи команду, ім'я якої містить приховані символи, символи зміни напряму тексту або символи, схожі на пробіл, `<` чи `>`, або довше за 256 символів, доки ви її не перейменуєте. У Claude Code імена `anthropic-skills` і `synced` зарезервовані й не завантажуються поза плагіном; суворіша заборона на "anthropic" або "claude" стосується навичок, завантажених у claude.ai або Skills API. Для навичок у плагінах `name` також задає останній сегмент команди.
+
+Усі поля фронтматера SKILL.md є необов'язковими; рекомендованим є лише `description`.
 
 ### Додаткові поля фронтматера
 
@@ -151,13 +153,13 @@ description: What this skill does and when to use it
 argument-hint: "[filename] [format]"        # Підказка для автодоповнення
 disable-model-invocation: true              # Тільки користувач може викликати
 user-invocable: false                       # Приховати з меню слеш-команд
-allowed-tools: Read, Grep, Glob             # Обмежити доступ до інструментів
+allowed-tools: Read, Grep, Glob             # Попередньо схвалити ці інструменти (без запитів дозволу), поки працює навичка
 model: opus                                 # Конкретна модель
 effort: high                                # Рівень зусиль (low, medium, high, max)
 context: fork                               # Запуск в ізольованому субагенті
 agent: Explore                              # Тип агента (з context: fork)
 shell: bash                                 # Оболонка: bash (за замовч.) або powershell
-hooks:                                      # Хуки, обмежені навичкою
+hooks:                                      # Хуки, що реєструються під час виклику навички
   PreToolUse:
     - matcher: "Bash"
       hooks:
@@ -169,8 +171,9 @@ paths: "src/api/**/*.ts"               # Glob-патерни, що обмежу�
 
 | Поле | Опис |
 |------|------|
-| `name` | Тільки малі літери, цифри, дефіси (макс. 64 символи). Не може містити "anthropic" або "claude". |
-| `description` | Що навичка робить І коли її використовувати (макс. 1024 символи). Критично для автоматичного зіставлення. |
+| `name` | Рекомендовано (переносно): тільки малі літери, цифри, дефіси (макс. 64 символи). `anthropic-skills` і `synced` зарезервовані в Claude Code. |
+| `description` | Що навичка робить І коли її використовувати. Об'єднаний текст `description` + `when_to_use` обрізається до 1 536 символів у переліку навичок (налаштовується через `skillListingMaxDescChars`). Критично для автоматичного зіставлення. |
+| `when_to_use` | Додатковий контекст про те, коли Claude має викликати навичку. Додається до `description` у переліку навичок і враховується в ліміті 1 536 символів. |
 | `argument-hint` | Підказка в меню автодоповнення `/` (наприклад, `"[filename] [format]"`). |
 | `disable-model-invocation` | `true` = тільки користувач може викликати через `/name`. Claude ніколи не викличе автоматично. |
 | `user-invocable` | `false` = приховано з меню `/`. Тільки Claude може викликати автоматично. |
@@ -179,8 +182,8 @@ paths: "src/api/**/*.ts"               # Glob-патерни, що обмежу�
 | `effort` | Перевизначення рівня зусиль: `low`, `medium`, `high` або `max`. |
 | `context` | `fork` для запуску навички у відгалуженому контексті субагента з власним контекстним вікном. |
 | `agent` | Тип субагента при `context: fork` (наприклад, `Explore`, `Plan`, `general-purpose`). |
-| `shell` | Оболонка для підстановок `!`command`` та скриптів: `bash` (за замовч.) або `powershell`. |
-| `hooks` | Хуки, обмежені життєвим циклом цієї навички (той самий формат, що й глобальні хуки). |
+| `shell` | Оболонка для підстановок `` !`command` `` та скриптів: `bash` (за замовч.) або `powershell`. |
+| `hooks` | Хуки, що реєструються під час виклику навички (той самий формат, що й хуки в settings; будь-яка подія). Вони діють до кінця сесії. |
 | `paths` | Glob-патерни, що обмежують автоактивацію. Рядок через кому або YAML-список. Формат як у правилах для конкретних шляхів. |
 
 ## Типи вмісту навичок
@@ -268,6 +271,8 @@ Fix GitHub issue $ARGUMENTS following our coding standards.
 
 Синтаксис `` !`command` `` виконує команди оболонки до того, як вміст навички відправляється до Claude:
 
+> **Примітка (v2.1.299)**: Хуки `UserPromptSubmit` виконуються до розгортання команди, тож хук, який блокує промпт, також не дає цим `!`-командам виконатися.
+
 ```yaml
 ---
 name: pr-summary
@@ -313,7 +318,7 @@ agent: Explore
 
 ```yaml
 ---
-name: deep-research
+name: topic-research
 description: Research a topic thoroughly
 context: fork
 agent: Explore
@@ -496,11 +501,11 @@ description: Create or update CLAUDE.md files following best practices for optim
 
 ## Core Principles
 
-**LLMs are stateless**: CLAUDE.md is the only file automatically included in every conversation.
+**LLMs are stateless**: CLAUDE.md is the main project file loaded into every conversation (alongside auto memory and unscoped rules).
 
 ### The Golden Rules
 
-1. **Less is More**: Keep under 300 lines (ideally under 100)
+1. **Less is More**: Keep each CLAUDE.md under 200 lines
 2. **Universal Applicability**: Only include information relevant to EVERY session
 3. **Don't Use Claude as a Linter**: Use deterministic tools instead
 4. **Never Auto-Generate**: Craft it manually with careful consideration
@@ -535,7 +540,7 @@ refactor/
 
 ```yaml
 ---
-name: code-refactor
+name: refactor
 description: Systematic code refactoring based on Martin Fowler's methodology. Use when users ask to refactor code, improve code structure, reduce technical debt, or eliminate code smells.
 ---
 
@@ -617,7 +622,7 @@ Can you help me review this code for security issues?
 
 ### Оновлення навички
 
-Редагуйте файл `SKILL.md` безпосередньо. Зміни набувають чинності при наступному запуску Claude Code.
+Редагуйте файл `SKILL.md` безпосередньо, а потім виконайте `/reload-skills` (v2.1.152+), щоб повторно просканувати каталоги навичок. Перезапуск Claude Code також працює, але не обов'язковий — навички з каталогів `--add-dir` підхоплюються наживо, а хук `SessionStart`, що повертає `reloadSkills: true`, запускає те саме пересканування.
 
 ```bash
 # Персональна навичка
@@ -730,7 +735,7 @@ description: Analyze Excel spreadsheets, generate pivot tables, create charts. U
 
 ### Claude не бачить усі навички
 
-Описи навичок завантажуються з лімітом **1% контекстного вікна** (резерв: **8 000 символів**). Кожен запис обмежений 250 символами незалежно від бюджету. Запустіть `/context`, щоб перевірити попередження про виключені навички. Перевизначте бюджет змінною оточення `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
+Описи навичок завантажуються з лімітом **1% контекстного вікна** (резерв: **8 000 символів**). Для кожного запису `description` + `when_to_use` обмежені 1 536 символами за замовчуванням (`skillListingMaxDescChars`). Запустіть `/context`, щоб перевірити попередження про виключені навички. Перевизначте бюджет змінною оточення `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
 
 ## Питання безпеки
 
@@ -763,7 +768,7 @@ Claude Code постачається з кількома вбудованими 
 | `/simplify` | Перевірка змінених файлів на повторне використання, якість та ефективність; запускає 3 паралельних агенти рев'ю |
 | `/batch <instruction>` | Оркестрація масштабних паралельних змін по кодовій базі з використанням git worktrees |
 | `/debug [description]` | Усунення несправностей поточної сесії через читання журналу налагодження |
-| `/loop [interval] <prompt>` | Циклічне виконання промпта з інтервалом (наприклад, `/loop 5m check the deploy`) |
+| `/loop [interval] [prompt]` | Циклічне виконання промпта з інтервалом (наприклад, `/loop 5m check the deploy`) |
 | `/claude-api` | Завантаження довідника Claude API/SDK; автоактивується при імпортах `anthropic`/`@anthropic-ai/sdk` |
 
 Ці навички доступні одразу і не потребують встановлення чи конфігурації. Вони використовують той самий формат SKILL.md, що й власні навички.
@@ -810,6 +815,17 @@ chmod +x ~/.claude/skills/my-skill/scripts/*.py
 - [Посібник хуків](../06-hooks/) — автоматизація за подіями
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
-**Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/skills
+- https://code.claude.com/docs/en/settings-reference
+- https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents
+- https://code.claude.com/docs/en/skills#characters-a-skill-name-cant-hold
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/changelog#2-1-299
+- https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill
+- https://code.claude.com/docs/en/memory#write-effective-instructions
+- https://code.claude.com/docs/en/memory
+- https://code.claude.com/docs/en/commands
+**Сумісні моделі**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

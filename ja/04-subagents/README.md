@@ -51,7 +51,7 @@
 
 各サブエージェントは独立して動作し、クリーンスレートの状態でそのタスクに必要な特定のコンテキストのみを受け取り、結果をメインエージェントに返して統合する。
 
-**クイックスタート**：`/agents` コマンドを使うと、サブエージェントを対話的に作成・表示・編集・管理できる。
+**クイックスタート**：Claude にサブエージェントの作成を頼む（「セキュリティをレビューするサブエージェントを作成して」）か、`.claude/agents/<name>.md` ファイルを直接追加する。詳しくは後述の[サブエージェントの管理](#サブエージェントの管理)を参照。
 
 ---
 
@@ -73,10 +73,11 @@
 
 | 優先度 | 種類 | 場所 | スコープ |
 |--------|------|------|---------|
-| 1（最高） | **CLI 定義** | `--agents` フラグ経由（JSON） | セッションのみ |
-| 2 | **プロジェクトサブエージェント** | `.claude/agents/` | 現在のプロジェクト |
-| 3 | **ユーザーサブエージェント** | `~/.claude/agents/` | 全プロジェクト |
-| 4（最低） | **プラグインエージェント** | プラグインの `agents/` ディレクトリ | プラグイン経由 |
+| 1（最高） | **マネージド** | マネージド設定 | 組織全体 |
+| 2 | **CLI 定義** | `--agents` フラグ経由（JSON） | セッションのみ |
+| 3 | **プロジェクトサブエージェント** | `.claude/agents/` | 現在のプロジェクト |
+| 4 | **ユーザーサブエージェント** | `~/.claude/agents/` | 全プロジェクト |
+| 5（最低） | **プラグインエージェント** | プラグインの `agents/` ディレクトリ | プラグイン経由 |
 
 同名が複数存在する場合、優先度の高いソースが優先される。
 
@@ -122,14 +123,14 @@ hooks:  # オプション — コンポーネントスコープのフック
 |-----------|-----|------|
 | `name` | はい | 一意な識別子（小文字とハイフン） |
 | `description` | はい | 用途の自然言語による説明。"use PROACTIVELY" を含めると自動呼び出しが促進される |
-| `tools` | いいえ | 特定ツールのカンマ区切りリスト。省略するとすべてのツールを継承。`Agent(agent_name)` 構文で生成可能なサブエージェントを制限できる |
+| `tools` | いいえ | 特定ツールのカンマ区切りリスト。省略するとすべてのツールを継承。`Agent(agent_name)` 構文で生成可能なサブエージェントを制限できる（`claude --agent` でメインスレッドとして実行する場合のみ。サブエージェント内では型リストは無視される）。MCP：`mcp__<server>__*` でサーバー全体を許可（v2.1.299+：その正確なサーバー名のみに一致） |
 | `disallowedTools` | いいえ | サブエージェントが使用してはならないツールのカンマ区切りリスト |
 | `model` | いいえ | 使用モデル：`sonnet`、`opus`、`haiku`、フルモデル ID、または `inherit`。デフォルトは設定済みのサブエージェントモデル |
-| `permissionMode` | いいえ | `default`、`acceptEdits`、`dontAsk`、`bypassPermissions`、`plan` |
+| `permissionMode` | いいえ | `default`（Manual モード。v2.1.200 以降 `manual` もエイリアスとして有効）、`acceptEdits`、`dontAsk`、`bypassPermissions`、`plan`、`auto`。親が `bypassPermissions`、`acceptEdits`、`auto` で動作している場合、サブエージェントの `permissionMode` は無視される |
 | `maxTurns` | いいえ | サブエージェントが取れるエージェント的ターンの最大数 |
 | `skills` | いいえ | プリロードするスキルのカンマ区切りリスト。起動時にスキルの全内容をサブエージェントのコンテキストに注入する |
 | `mcpServers` | いいえ | サブエージェントから利用可能にする MCP サーバー |
-| `hooks` | いいえ | コンポーネントスコープのフック（PreToolUse、PostToolUse、Stop） |
+| `hooks` | いいえ | このサブエージェントがアクティブな間だけ実行されるフック。すべてのフックイベントに対応。よく使うのは `PreToolUse`、`PostToolUse`、`Stop`（`SubagentStop` として実行） |
 | `memory` | いいえ | 永続メモリディレクトリのスコープ：`user`、`project`、`local` |
 | `background` | いいえ | `true` にすると常にこのサブエージェントをバックグラウンドタスクとして実行 |
 | `effort` | いいえ | 推論努力レベル：`low`、`medium`、`high`、`max` |
@@ -159,7 +160,9 @@ mcpServers:
     url: https://mcp.notion.com/mcp
   github:
     type: http
-    url: https://api.github.com/mcp
+    url: https://api.githubcopilot.com/mcp/
+    headers:
+      Authorization: "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
 tools: Read, Grep, Glob
 ---
 
@@ -239,12 +242,13 @@ claude --agents '{
 
 エージェント定義は次の優先順位でロードされる（最初に一致したものが優先）：
 
-1. **CLI 定義** — `--agents` フラグ（セッションのみ、JSON）
-2. **プロジェクトレベル** — `.claude/agents/`（現在のプロジェクト）
-3. **ユーザーレベル** — `~/.claude/agents/`（すべてのプロジェクト）
-4. **プラグインレベル** — プラグインの `agents/` ディレクトリ
+1. **マネージド** — マネージド設定（組織全体）
+2. **CLI 定義** — `--agents` フラグ（セッションのみ、JSON）
+3. **プロジェクトレベル** — `.claude/agents/`（現在のプロジェクト）
+4. **ユーザーレベル** — `~/.claude/agents/`（すべてのプロジェクト）
+5. **プラグインレベル** — プラグインの `agents/` ディレクトリ
 
-これにより、CLI 定義が単一セッションにおいて他のすべてのソースを上書きできる。
+これにより、CLI 定義が単一セッションにおいてプロジェクト・ユーザー・プラグインの定義を上書きできる。ただし、マネージド定義は引き続き優先される。
 
 ---
 
@@ -256,10 +260,10 @@ Claude Code には常に利用可能な組み込みサブエージェントが�
 |-------------|-------|------|
 | **general-purpose** | 継承 | 複雑な多段タスク |
 | **Plan** | 継承 | プランモードのリサーチ |
-| **Explore** | Haiku | 読み取り専用のコードベース探索（quick/medium/very thorough） |
-| **Bash** | 継承 | 別コンテキストでのターミナルコマンド |
-| **statusline-setup** | Sonnet | ステータスラインの設定 |
-| **Claude Code Guide** | Haiku | Claude Code の機能に関する質問への回答 |
+| **Explore** | 継承（上限は Opus） | 読み取り専用のコードベース探索（quick/medium/very thorough） |
+| **claude** | 継承 | より専門的なエージェントに当てはまらないタスク向けの汎用エージェント。サブエージェントが利用できるすべてのツールを持つ。ディスパッチされたバックグラウンドセッションのデフォルトエージェントでもある |
+| **statusline-setup** | Sonnet | `/statusline` でステータスラインを設定するときに実行される |
+| **claude-code-guide** | Haiku | Claude Code の機能に関する質問への回答 |
 
 ### General-Purpose サブエージェント
 
@@ -298,15 +302,15 @@ Claude Code には常に利用可能な組み込みサブエージェントが�
 - **"medium"** — 適度な探索。速度と徹底度のバランスが取れたデフォルトのアプローチ
 - **"very thorough"** — 複数の場所と命名規約をまたぐ網羅的分析。時間がかかる場合がある
 
-### Bash サブエージェント
+### claude サブエージェント
 
 | プロパティ | 値 |
 |-----------|-----|
 | **モデル** | 親から継承 |
-| **ツール** | Bash |
-| **目的** | 別のコンテキストウィンドウでターミナルコマンドを実行 |
+| **ツール** | サブエージェントが利用できるすべてのツール |
+| **目的** | より専門的なエージェントに当てはまらないタスク向けの汎用エージェント |
 
-**使用場面**：隔離されたコンテキストの恩恵を受けるシェルコマンドを実行するとき。
+**使用場面**：より専門的な組み込みエージェントに当てはまらないタスクのとき。ディスパッチされたバックグラウンドセッションのデフォルトエージェントでもあり、開始時の権限モードはそのセッションの起動方法によって決まる。
 
 ### Statusline Setup サブエージェント
 
@@ -318,7 +322,7 @@ Claude Code には常に利用可能な組み込みサブエージェントが�
 
 **使用場面**：ステータスラインのセットアップやカスタマイズ時。
 
-### Claude Code Guide サブエージェント
+### Claude Code Guide サブエージェント（`claude-code-guide`）
 
 | プロパティ | 値 |
 |-----------|-----|
@@ -334,17 +338,13 @@ Claude Code には常に利用可能な組み込みサブエージェントが�
 
 ### `/agents` コマンドを使う（推奨）
 
-```bash
-/agents
+> **注**：`/agents` の対話型ウィザードは v2.1.198 で削除され、v2.1.281 以降は `/agents` が `/` メニューにも `/help` にも表示されない。サブエージェントの作成や管理は Claude に頼む（例：「セキュリティをレビューするサブエージェントを作成して」）か、`.claude/agents/<name>.md` ファイルを直接追加すること。
+
+```text
+セキュリティ脆弱性をレビューするサブエージェントを作成して。
 ```
 
-これは以下を行う対話メニューを提供する：
-
-- 利用可能なすべてのサブエージェント（組み込み、ユーザー、プロジェクト）の表示
-- ガイド付きセットアップで新しいサブエージェントを作成
-- 既存のカスタムサブエージェントとツールアクセスの編集
-- カスタムサブエージェントの削除
-- 重複がある場合にどのサブエージェントが有効かを確認
+Claude が `.claude/agents/<name>.md` ファイルを書き、適切なフロントマター（ツール、モデル、説明）を選んでくれる。その後、ファイルを手で調整するか、Claude に修正を頼めばよい。
 
 ### 直接ファイル管理
 
@@ -421,11 +421,7 @@ claude --agent code-reviewer
 
 ### 利用可能なエージェントの一覧表示
 
-`claude agents` コマンドを使って、すべてのソースから設定済みエージェントを一覧表示する：
-
-```bash
-claude agents
-```
+設定済みのサブエージェントを確認するには、Claude に尋ねるか、`.claude/agents/` と `~/.claude/agents/` を参照する。（`claude agents` は別物で、バックグラウンドセッション用の agent view を開く。）
 
 ---
 
@@ -486,6 +482,7 @@ claude agents
 ```yaml
 ---
 name: researcher
+description: Research assistant that keeps findings in persistent memory across sessions
 memory: user
 ---
 
@@ -531,7 +528,7 @@ description: Performs long-running analysis tasks in the background
 | ショートカット | 動作 |
 |-------------|------|
 | `Ctrl+B` | 現在実行中のサブエージェントタスクをバックグラウンド化 |
-| `Ctrl+F` | バックグラウンドエージェントをすべて終了（確認のため 2 回押下） |
+| `Ctrl+X` `Ctrl+K` | 実行中のバックグラウンドサブエージェントをすべて停止（確認のため 3 秒以内に 2 回押下。`Ctrl+F` から置き換わった） |
 
 ### バックグラウンドタスクの無効化
 
@@ -582,35 +579,42 @@ graph TB
 
 ## フォークサブエージェント
 
-フォークサブエージェント（`context: fork`）は、フォーク時点の親エージェントの会話コンテキスト全体を継承し、クリーンスレートではなくその状態から開始する。これは、これまでの作業を失わずに代替案を探索する場合に有用である。
+フォークサブエージェントは、フォーク時点の親の会話全体（システムプロンプト、ツール、モデル、メッセージ履歴、プロンプトキャッシュ）を継承し、クリーンスレートではなくその状態から開始する。これは、これまでの作業を失わずに代替案を探索する場合に有用である。
 
-> **可用性**：v2.1.117 で GA。外部ビルド（ファーストパーティ以外の配布）では `CLAUDE_CODE_FORK_SUBAGENT=1` を設定するとフォークが有効化される。
+> **可用性**：v2.1.117 で GA。**v2.1.232 以降、フォークモードは対話セッションではデフォルトで有効**であり、これはファーストパーティかどうかを問わずすべてのビルドに当てはまる。v2.1.302 以降は、非対話モード（`claude -p`）、Agent SDK、デスクトップアプリ、VS Code でもデフォルトで有効である。`claude mcp serve` はフォークサブエージェントを提供しない。デフォルト無効の環境で有効化する場合、または v2.1.232 より古い Claude Code では、`CLAUDE_CODE_FORK_SUBAGENT=1` を設定する。
 
 ### 設定
 
-```yaml
----
-name: alternative-explorer
-description: Explore an alternative implementation path while preserving parent context
-context: fork
-tools: Read, Edit, Bash, Grep, Glob
----
+フォークはエージェントファイルでは定義しない。Claude が Agent ツールで `subagent_type: "fork"` を指定して開始するか、ユーザーが `/subtask <task>`（v2.1.212+）で開始する：
 
-You are a forked subagent. You inherit the parent's full conversation and
-may explore an alternative approach. Return your findings and the parent
-will decide whether to adopt them.
+```text
+/subtask Explore an alternative implementation path and report the trade-offs
 ```
+
+フォークはさらにフォークを生成できない。フォークをブロックするには、拒否ルール `Agent(fork)` を追加する：
+
+```json
+{
+  "permissions": {
+    "deny": ["Agent(fork)"]
+  }
+}
+```
+
+> **注意**：`context: fork` は**スキル**のフロントマターフィールドであり（[スキル](../03-skills/README.md)を参照）、サブエージェントのフィールドではない。Claude Code はエージェント定義内の未知のフィールドを警告なしに無視する。
 
 ### 外部ビルドでの有効化
 
+`CLAUDE_CODE_FORK_SUBAGENT=0` を設定すると、すべての環境でフォークモードを無効にできる。v2.1.302 より前のバージョンでは、`claude -p` と Agent SDK でフォークを有効にするために `1` を設定する。
+
 ```bash
-export CLAUDE_CODE_FORK_SUBAGENT=1
+export CLAUDE_CODE_FORK_SUBAGENT=0
 claude
 ```
 
 ### Fork とクリーンコンテキストの使い分け
 
-| シナリオ | `context: fork` | クリーンコンテキスト（デフォルト） |
+| シナリオ | フォーク（`subagent_type: "fork"`） | クリーンコンテキスト（デフォルト） |
 |---------|-----------------|-------------------------|
 | 代替実装の探索 | はい | いいえ（コンテキストを失う） |
 | 既存コンテキストを伴う長期調査 | はい | いいえ |
@@ -621,7 +625,7 @@ claude
 
 ## 生成可能なサブエージェントの制限
 
-`tools` フィールドで `Agent(agent_type)` 構文を使うと、特定のサブエージェントが生成できるサブエージェントを制御できる。これは委譲対象の特定サブエージェントを許可リスト化する手段を提供する。
+`tools` フィールドで `Agent(agent_type)` 構文を使うと、`claude --agent` でメインスレッドとして実行されるエージェントが生成できるサブエージェントを制御できる。これは委譲対象の特定サブエージェントを許可リスト化する手段を提供する。サブエージェント定義では、括弧内の型リストは無視される。
 
 > **注**：v2.1.63 で `Task` ツールは `Agent` にリネームされた。既存の `Task(...)` 参照は引き続きエイリアスとして機能する。
 
@@ -638,23 +642,20 @@ You are a coordinator agent. You can delegate work to the "worker" and
 "researcher" subagents only. Use Read and Bash for your own exploration.
 ```
 
-この例では、`coordinator` サブエージェントは `worker` と `researcher` サブエージェントのみ生成できる。他のサブエージェントが定義されていても、それらを生成することはできない。
+この例では、`claude --agent coordinator` で実行すると、メインスレッドは `worker` と `researcher` サブエージェントのみ生成できる。他のサブエージェントが定義されていても、それらを生成することはできない。`coordinator` がサブエージェントとして実行される場合、型リストは無視される。
 
 ---
 
 ## `claude agents` CLI コマンド
 
-`claude agents` コマンドは、設定済みのすべてのエージェントをソース別（組み込み、ユーザーレベル、プロジェクトレベル）にグループ化して一覧表示する：
+`claude agents` は **agent view**（v2.1.139+）を開く。バックグラウンドセッションを状態別にまとめた全画面リストである。設定済みのサブエージェント定義は一覧表示しない。セッション状態をスクリプトで扱うには `claude agents --json` を使う。
 
 ```bash
 claude agents
+claude agents --json
 ```
 
-このコマンドは：
-
-- すべてのソースから利用可能なエージェントを表示する
-- ソースの場所別にエージェントをグループ化する
-- 高い優先度レベルのエージェントが低い優先度のエージェントを覆い隠す場合（例：ユーザーレベルと同名のプロジェクトレベルエージェント）、**override** を表示する
+設定済みのサブエージェントは `.claude/agents/`（プロジェクト）と `~/.claude/agents/`（ユーザー）に置かれる。
 
 ---
 
@@ -732,7 +733,7 @@ claude --teammate-mode tmux
 
 ### ナビゲーション
 
-`Shift+Down` で分割ペインモード内のチームメイト間を移動できる。
+チームメイト間を移動するには、エージェントパネルで上下矢印キーを使って選択し Enter を押す（インプロセスモード）か、チームメイトのペインをクリックする（分割ペインモード）。
 
 ### チーム設定
 
@@ -912,7 +913,7 @@ graph TB
 ### 主要な動作
 
 - **入れ子生成なし** — サブエージェントは他のサブエージェントを生成できない
-- **バックグラウンド権限** — バックグラウンドサブエージェントは事前承認されていない権限を自動拒否する
+- **バックグラウンド権限** — バックグラウンドサブエージェントが事前承認されていない権限を必要とすると、メインセッションに権限プロンプトが表示され、要求しているサブエージェント名が示される
 - **バックグラウンド化** — `Ctrl+B` で現在実行中のタスクをバックグラウンド化
 - **トランスクリプト** — サブエージェントのトランスクリプトは `~/.claude/projects/{project}/{sessionId}/subagents/agent-{agentId}.jsonl` に保存される
 - **自動圧縮** — サブエージェントのコンテキストは容量約 95% で自動圧縮される（`CLAUDE_AUTOCOMPACT_PCT_OVERRIDE` 環境変数で上書き可能）
@@ -1112,21 +1113,52 @@ graph TB
 
 ---
 
+### 8. Clean Code Reviewer（`clean-code-reviewer.md`）
+
+**目的**：クリーンコード原則に照らした可読性・保守性のレビュー
+
+**ツール**：Read、Grep、Glob、Bash
+
+**専門分野**：
+
+- 命名、関数の長さ、引数の数
+- 重複コードとデッドコード
+- コメントの質と意図
+- 巧妙さより構造の明快さ
+
+**使用場面**：正しさのレビューとは別に、スタイルと保守性の観点で見直したいとき
+
+---
+
+### 9. Performance Optimizer（`performance-optimizer.md`）
+
+**目的**：パフォーマンスのボトルネックを特定して改善する
+
+**ツール**：Read、Edit、Bash、Grep、Glob
+
+**専門分野**：
+
+- アルゴリズムの計算量とホットパス
+- メモリ確保とリーク
+- キャッシュとクエリの最適化
+- 並行処理と I/O のボトルネック
+
+**使用場面**：計測できるレベルで遅く、的を絞った最適化が必要なとき
+
+---
+
 ## インストール手順
 
 ### 方法 1：/agents コマンドを使う（推奨）
 
-```bash
-/agents
+> **注**：`/agents` の対話型ウィザードは v2.1.198 で削除され、v2.1.281 以降は `/agents` が `/` メニューにも `/help` にも表示されない。サブエージェントの作成や管理は Claude に頼む（例：「セキュリティをレビューするサブエージェントを作成して」）か、`.claude/agents/<name>.md` ファイルを直接追加すること。
+
+```text
+テストを実行して失敗を修正する、プロジェクトレベルのサブエージェントを作成して。
+Bash、Read、Edit、Grep へのアクセスを与えて。
 ```
 
-その後：
-
-1. 'Create New Agent' を選択
-2. プロジェクトレベルかユーザーレベルを選択
-3. サブエージェントを詳しく説明する
-4. アクセスを許可するツールを選択（または空欄ですべてを継承）
-5. 保存して使用
+Claude が適切なフロントマター付きで `.claude/agents/<name>.md` を書く。生成されたファイルを確認してから使用する。
 
 ### 方法 2：プロジェクトにコピー
 
@@ -1162,13 +1194,13 @@ cp /path/to/04-subagents/debugger.md ~/.claude/agents/
 
 ### 検証
 
-インストール後、エージェントが認識されているか確認する：
+インストール後、ディレクトリを一覧表示してエージェントが認識されているか確認する：
 
 ```bash
-/agents
+ls .claude/agents/
 ```
 
-組み込みエージェントとともにインストールしたエージェントが一覧表示されるはずである。
+現在のセッションで利用可能なサブエージェントを Claude に尋ねることもできる。Claude は委任できる組み込みエージェントとカスタムエージェントを報告する。
 
 ---
 
@@ -1184,7 +1216,9 @@ project/
 │       ├── secure-reviewer.md
 │       ├── implementation-agent.md
 │       ├── debugger.md
-│       └── data-scientist.md
+│       ├── data-scientist.md
+│       ├── clean-code-reviewer.md
+│       └── performance-optimizer.md
 └── ...
 ```
 
@@ -1239,13 +1273,22 @@ graph TD
 
 ---
 
-**最終更新**：2026 年 4 月 24 日
-**Claude Code バージョン**：2.1.119
+**最終更新**：2026 年 10 月 18 日
+**Claude Code バージョン**：2.1.302
 **ソース**：
 
 - https://code.claude.com/docs/en/sub-agents
 - https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/interactive-mode
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.117
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.119
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/agent-view
+- https://code.claude.com/docs/en/sub-agents#permission-modes
+- https://code.claude.com/docs/en/sub-agents#available-tools
+- https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/changelog#2-1-302
 
 **互換モデル**：Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5

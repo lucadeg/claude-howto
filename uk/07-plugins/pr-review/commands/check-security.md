@@ -1,5 +1,4 @@
 ---
-name: Security Check
 description: Запуск рев'ю коду з фокусом на безпеці
 ---
 
@@ -12,3 +11,11 @@ description: Запуск рев'ю коду з фокусом на безпец
 3. Вразливості ін'єкцій
 4. Криптографічні слабкості
 5. Чутливі дані в логах
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

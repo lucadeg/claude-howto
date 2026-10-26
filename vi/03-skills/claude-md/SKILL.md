@@ -17,7 +17,7 @@ Bạn **BẮT BUỘC** phải xem xét đầu vào của người dùng trước
 
 ## Nguyên Tắc Cốt Lõi
 
-**LLMs là không trạng thái**: CLAUDE.md là file duy nhất được bao gồm tự động trong mọi cuộc hội thoại. Nó phục vụ như tài liệu onboarding chính cho các tác nhân AI vào codebase của bạn.
+**LLMs là không trạng thái**: CLAUDE.md là file dự án chính được tải vào mọi cuộc hội thoại (cùng với auto memory và các rules không giới hạn phạm vi). Nó phục vụ như tài liệu onboarding chính cho các tác nhân AI vào codebase của bạn.
 
 ### Các Quy Tắc Vàng
 
@@ -93,7 +93,7 @@ Trong CLAUDE.md, tham khảo các file này với các hướng dẫn như:
 
 Khi tạo hoặc cập nhật CLAUDE.md:
 
-1. **Độ Dài Mục Tiêu**: Dưới 300 dòng (lý tưởng dưới 100)
+1. **Độ Dài Mục Tiêu**: Dưới 200 dòng
 2. **Không Quy Tắc Phong Cách**: Loại bỏ bất kỳ hướng dẫn linting/formatting nào
 3. **Không Hướng Dẫn Cụ Theo Tác Vụ**: Di chuyển sang các file riêng
 4. **Không Đoạn Code**: Sử dụng tham chiếu file thay thế
@@ -150,7 +150,7 @@ Mô tả ngắn một dòng.
 
 Trước khi hoàn thành, xác minh:
 
-- [ ] Dưới 300 dòng (lý tưởng dưới 100)
+- [ ] Dưới 200 dòng
 - [ ] Mọi dòng áp dụng cho TẤT CẢ các phiên
 - [ ] Không quy tắc phong cách/formatting
 - [ ] Không đoạn code (sử dụng tham chiếu file)
@@ -193,10 +193,14 @@ Trước khi hoàn thành, xác minh:
 
 Nếu người dùng yêu cầu tạo/cập nhật AGENTS.md:
 
-AGENTS.md được sử dụng để định nghĩa các hành vi tác nhân chuyên biệt. Không giống CLAUDE.md (dành cho bối cảnh dự án), AGENTS.md định nghĩa:
-- Các vai trò và khả năng tác nhân tùy chỉnh
-- Hướng dẫn và ràng buộc cụ thể tác nhân
-- Định nghĩa workflow cho các kịch bản đa tác nhân
+**Từ v2.1.277, Claude Code đọc `AGENTS.md` trực tiếp như hướng dẫn dự án** — nhưng chỉ khi thư mục làm việc và mọi thư mục phía trên nó đều không có `CLAUDE.md`, `.claude/CLAUDE.md`, hay `CLAUDE.local.md`. `~/.claude/CLAUDE.md`, CLAUDE.md được quản lý, và `.claude/rules/` không tính vào kiểm tra đó và vẫn được tải song song. Hành vi này được điều khiển bởi **Project instructions** trong `/config`: `claude-md-or-agents-md` (mặc định), `claude-md-and-agents-md`, `claude-md`, hoặc `managed-only`. Ở nơi không hỗ trợ đọc trực tiếp — phiên bản trước v2.1.277 (trước v2.1.281 trên Bedrock/Vertex/Foundry, LLM gateway, hoặc khi telemetry bị tắt), hoặc phiên đầu tiên sau khi nâng cấp — hãy dùng cách dự phòng: import từ CLAUDE.md bằng `@AGENTS.md`, hoặc symlink `CLAUDE.md` tới nó.
+
+AGENTS.md là file bối cảnh dự án dùng chung giữa nhiều công cụ — cùng *loại* tài liệu với CLAUDE.md, không phải định dạng định nghĩa tác nhân. Nó tồn tại để nhiều coding agent có thể dùng chung một bộ quy ước dự án:
+- Các lệnh build, test, và lint
+- Quy ước code style và kiến trúc
+- Bố cục repository và vị trí của các thành phần
+
+Subagents được định nghĩa riêng, trong `.claude/agents/*.md` — không phải trong AGENTS.md.
 
 Áp dụng các nguyên tắc tương tự:
 - Giữ tập trung và ngắn gọn
@@ -210,3 +214,10 @@ AGENTS.md được sử dụng để định nghĩa các hành vi tác nhân chu
 - Lời nhắc hệ thống cho Claude biết rằng CLAUDE.md "có thể hoặc có thể không liên quan" - càng nhiều tiếng ồn, càng bị bỏ qua
 - Monorepos hưởng lợi nhất từ cấu trúc WHAT/WHY/HOW rõ ràng
 - Các file CLAUDE.md cụ thể thư mục nên được tập trung hơn nữa
+
+---
+
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/memory

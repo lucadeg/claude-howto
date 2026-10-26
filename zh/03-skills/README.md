@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Agent Skills 指南
@@ -68,10 +68,10 @@ description: 这个 skill 的用途，以及什么时候触发
 ## Examples
 ```
 
-### 必填字段
+### 推荐字段
 
-- `name`
-- `description`
+- `description`（推荐）：说明这个 skill 做什么、什么时候用；Claude 就是靠它判断是否激活
+- `name`（可选）：省略时默认取 skill 的目录名
 
 ### 可选 frontmatter 字段
 
@@ -105,6 +105,8 @@ Skills 支持 `$ARGUMENTS`、`$0`、`$1` 等参数替换。
 ### 动态上下文注入
 
 你可以在 prompt 里插入 shell 命令结果：
+
+> **注意（v2.1.299）**：`UserPromptSubmit` hooks 会在命令展开之前运行，因此阻止该 prompt 的 hook 也会阻止这些 `!` 命令运行。
 
 ```md
 - 当前 git 状态：!`git status`
@@ -269,3 +271,12 @@ chmod +x ~/.claude/skills/*/scripts/*
 - [Slash Commands 中文参考](../01-slash-commands/README.md)
 - [Memory 中文指南](../02-memory/README.md)
 - [Subagents 中文参考](../04-subagents/README.md)
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/skills
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/changelog#2-1-299

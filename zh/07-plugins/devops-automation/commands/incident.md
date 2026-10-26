@@ -1,5 +1,4 @@
 ---
-name: Incident Response
 description: 使用结构化响应流程处理生产事故
 ---
 
@@ -14,3 +13,11 @@ description: 使用结构化响应流程处理生产事故
 5. 协调响应工作
 6. 记录解决方案
 7. 安排事后复盘
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

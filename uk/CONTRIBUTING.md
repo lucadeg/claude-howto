@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Внесок у Claude How To
@@ -72,7 +72,7 @@ git checkout -b docs/improvement-area
 
 ### 3. Налаштування середовища
 
-Pre-commit хуки запускають ті ж перевірки, що й CI, локально перед кожним комітом. Усі чотири перевірки повинні пройти перед прийняттям PR.
+Pre-commit хуки запускають ті ж перевірки, що й CI, локально перед кожним комітом. Усі п'ять перевірок повинні пройти перед прийняттям PR.
 
 **Необхідні залежності:**
 
@@ -86,8 +86,9 @@ uv pip install -r scripts/requirements-dev.txt
 # Markdown linter (Node.js)
 npm install -g markdownlint-cli
 
-# Mermaid diagram validator (Node.js)
-npm install -g @mermaid-js/mermaid-cli
+# Mermaid diagrams render with Pele, which needs Node.js >= 20 (nothing to
+# install globally). Check your version:
+node --version
 
 # Install pre-commit and activate hooks
 uv pip install pre-commit
@@ -99,6 +100,8 @@ pre-commit install
 ```bash
 pre-commit run --all-files
 ```
+
+Перший запуск завантажує Node.js 22 для хуків Mermaid (його надає сам pre-commit, тож вони працюють навіть без системного Node.js) і закріплений бандл Pele у `scripts/.vendor-cache/pele/`; наступні запуски працюють офлайн. Хуки Mermaid працюють у суворому режимі й падають, якщо Pele не вдається запустити. Щоб зробити коміт офлайн до першого завантаження, пропустіть їх через `SKIP=mermaid,vietnamese-mermaid,japanese-mermaid`.
 
 Хуки, що запускаються при кожному коміті:
 

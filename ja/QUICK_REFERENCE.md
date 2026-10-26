@@ -32,10 +32,10 @@ cp 02-memory/personal-CLAUDE.md ~/.claude/CLAUDE.md
 ### スキル
 ```bash
 # 個人スキル
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # プロジェクトスキル
-cp -r 03-skills/code-review .claude/skills/
+cp -r 03-skills/code-review-specialist .claude/skills/
 ```
 
 ### サブエージェント
@@ -50,7 +50,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### MCP
 ```bash
 # 認証情報を設定
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
 
 # 設定をインストール (プロジェクトスコープ)
@@ -72,7 +72,7 @@ chmod +x ~/.claude/hooks/*.sh
 ### プラグイン
 ```bash
 # 例からインストール (公開済みなら)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 /plugin install devops-automation
 /plugin install documentation
 ```
@@ -99,9 +99,9 @@ chmod +x ~/.claude/hooks/*.sh
 # default        - 危険な操作で承認を求める
 # acceptEdits    - ファイル編集を自動承認、それ以外は確認
 # plan           - 読み取り専用分析、変更なし
-# dontAsk        - 危険なもの以外すべて承認
+# dontAsk        - 事前承認済みのツールのみ実行、それ以外はすべて拒否
 # auto           - バックグラウンド分類器が自動的に権限を判断
-# bypassPermissions - すべて承認 (--dangerously-skip-permissions が必要)
+# bypassPermissions - すべて承認 (--permission-mode bypassPermissions。--dangerously-skip-permissions も同等)
 
 # セッション管理
 /resume                # 過去の会話を再開
@@ -122,18 +122,18 @@ claude -r "session"    # 名前 / ID でセッションを再開
 | **スキル** | `.claude/skills/*/SKILL.md` | 自動起動 |
 | **サブエージェント** | `.claude/agents/*.md` | 自動委譲 |
 | **MCP** | `.mcp.json` (プロジェクト) または `~/.claude.json` (ユーザー) | `/mcp__server__action` |
-| **フック (28 イベント)** | `~/.claude/hooks/*.sh` | イベントトリガー (5 種類) |
+| **フック (33 イベント)** | `~/.claude/hooks/*.sh` | イベントトリガー (5 種類) |
 | **プラグイン** | `/plugin install` 経由 | すべてをバンドル |
 | **チェックポイント** | 組み込み | `Esc+Esc` または `/rewind` |
 | **プランニングモード** | 組み込み | `/plan <task>` |
 | **権限モード (6 モード)** | 組み込み | `--allowedTools`、`--permission-mode` |
-| **セッション** | 組み込み | `/session <command>` |
+| **セッション** | 組み込み | `/resume`、`/rename`、`/branch`、`/fork` |
 | **バックグラウンドタスク** | 組み込み | バックグラウンドで実行 |
-| **リモートコントロール** | 組み込み | WebSocket API |
-| **Web セッション** | 組み込み | `claude web` |
-| **Git ワークツリー** | 組み込み | `/worktree` |
-| **Auto Memory** | 組み込み | CLAUDE.md に自動保存 |
-| **タスクリスト** | 組み込み | `/task list` |
+| **リモートコントロール** | 組み込み | `claude --remote-control` または `/remote-control` |
+| **Web セッション** | 組み込み | `claude --cloud "task"` |
+| **Git ワークツリー** | 組み込み | `claude -w <name>` |
+| **Auto Memory** | 組み込み | `~/.claude/projects/<project>/memory/` に自動保存 |
+| **タスクリスト** | 組み込み | `Ctrl+T`（チェックリスト）、`/tasks`（バックグラウンド作業） |
 | **バンドルスキル (5 個)** | 組み込み | `/simplify`、`/loop`、`/claude-api`、`/voice`、`/browse` |
 
 ---
@@ -151,11 +151,11 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 # 利用: 自動委譲
 
 # 方法 3: スキル
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 # 利用: 自動起動
 
 # 方法 4: プラグイン (推奨)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # 利用: /review-pr
 ```
 
@@ -193,7 +193,7 @@ vim CLAUDE.md
 
 ### 自動化とフック
 ```bash
-# フックをインストール (28 イベント、5 種類: command, http, mcp_tool, prompt, agent)
+# フックをインストール (33 イベント、5 種類: command, http, mcp_tool, prompt, agent)
 mkdir -p ~/.claude/hooks
 cp 06-hooks/*.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
@@ -253,10 +253,10 @@ claude --permission-mode plan
 ### Agent Teams
 ```bash
 # Agent Teams を有効化
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # あるいは settings.json で
-{ "agentTeams": { "enabled": true } }
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
 
 # 開始: "Implement feature X using a team approach"
 ```
@@ -266,15 +266,15 @@ export CLAUDE_AGENT_TEAMS=1
 # 5 分ごとにコマンドを実行
 /loop 5m /check-status
 
-# 一回限りのリマインダー
-/loop 30m "remind me to check the deploy"
+# 一回限りのリマインダー：普通の言葉で頼む（/loop はキャンセルするまで繰り返す）
+30 分後にデプロイを確認するようリマインドして
 ```
 
 ---
 
 ## 📁 ファイル配置リファレンス
 
-```
+```text
 Your Project/
 ├── .claude/
 │   ├── commands/              # スラッシュコマンドはここ
@@ -294,9 +294,12 @@ User Home/
 │   ├── skills/                # 個人スキル
 │   ├── hooks/                 # フックスクリプト
 │   ├── settings.json          # ユーザー設定
-│   ├── managed-settings.d/    # 管理設定 (エンタープライズ / 組織)
 │   └── CLAUDE.md              # 個人メモリ
 └── .claude.json               # 個人 MCP 設定 (ユーザースコープ)
+
+システムディレクトリ/          # macOS /Library/Application Support/ClaudeCode/、Linux /etc/claude-code/、Windows C:\Program Files\ClaudeCode\
+├── managed-settings.json      # 管理設定 (エンタープライズ / 組織)
+└── managed-settings.d/        # 管理設定のドロップイン
 ```
 
 ---
@@ -357,7 +360,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### 4〜5 日目
 ```bash
 # MCP をセットアップ
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 cp 05-mcp/github-mcp.json .mcp.json
 
 # MCP コマンドを試す
@@ -367,7 +370,7 @@ cp 05-mcp/github-mcp.json .mcp.json
 ### 第 2 週
 ```bash
 # スキルをインストール
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 自動起動させる
 # こう言うだけ: "Review this code for issues"
@@ -376,7 +379,7 @@ cp -r 03-skills/code-review ~/.claude/skills/
 ### 第 3 週以降
 ```bash
 # 完全プラグインをインストール
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # バンドル機能を使う
 /review-pr
@@ -393,17 +396,17 @@ cp -r 03-skills/code-review ~/.claude/skills/
 | **Auto Mode** | バックグラウンド分類器による完全自律動作 | `--enable-auto-mode` フラグ、`Shift+Tab` でモード切替 |
 | **チャンネル** | Discord と Telegram 統合 | `--channels` フラグ、Discord / Telegram ボット |
 | **音声入力** | コマンドとコンテキストを Claude に音声で伝える | `/voice` コマンド |
-| **フック (28 イベント)** | 5 種類に拡張されたフックシステム | command、http、mcp_tool、prompt、agent の各フック種別 |
+| **フック (33 イベント)** | 5 種類に拡張されたフックシステム | command、http、mcp_tool、prompt、agent の各フック種別 |
 | **MCP Elicitation** | MCP サーバが実行時にユーザー入力を要求できる | サーバが要明確化なら自動プロンプト |
 | **Plugin LSP** | プラグインの Language Server Protocol サポート | `userConfig`、`${CLAUDE_PLUGIN_DATA}` 変数 |
-| **リモートコントロール** | WebSocket API で Claude Code を制御 | 外部統合のための `claude --remote` |
-| **Web セッション** | ブラウザベースの Claude Code インターフェース | 起動：`claude web` |
+| **リモートコントロール** | claude.ai または Claude アプリからローカルセッションを操作 | `claude --remote-control`（セッション内では `/remote-control`） |
+| **Web セッション** | claude.ai/code 上のクラウドセッション | ターミナルから開始：`claude --cloud "task"` |
 | **デスクトップアプリ** | ネイティブデスクトップアプリ | claude.ai/download からダウンロード |
-| **タスクリスト** | バックグラウンドタスクの管理 | `/task list`、`/task status <id>` |
-| **Auto Memory** | 会話からの自動メモリ保存 | Claude が CLAUDE.md に主要コンテキストを自動保存 |
-| **Git ワークツリー** | 並列開発のための隔離ワークスペース | `/worktree` で隔離ワークスペースを作成 |
-| **モデル選択** | Sonnet 4.6、Opus 4.7、Haiku 4.5 を切替 | `/model` または `--model` フラグ |
-| **Agent Teams** | タスク上の複数エージェントを協調 | 環境変数 `CLAUDE_AGENT_TEAMS=1` で有効化 |
+| **タスクリスト** | バックグラウンドタスクの管理 | `/tasks`（エイリアス `/bashes`） |
+| **Auto Memory** | 会話からの自動メモリ保存 | Claude が `~/.claude/projects/<project>/memory/MEMORY.md` にメモを保存。`/memory` で管理 |
+| **Git ワークツリー** | 並列開発のための隔離ワークスペース | `claude --worktree <name>`（または `-w`） |
+| **モデル選択** | Fable 5.1、Fable 5、Opus 5、Sonnet 5.5、Sonnet 5、Sonnet 4.6、Opus 4.8、Haiku 4.5 を切替 | `/model` または `--model` フラグ（Anthropic API では `sonnet` は Sonnet 5.5 を指す、v2.1.284+） |
+| **Agent Teams** | タスク上の複数エージェントを協調 | 環境変数 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` で有効化（実験的） |
 | **スケジュールタスク** | `/loop` による反復タスク | `/loop 5m /command` または CronCreate ツール |
 | **Chrome 連携** | ブラウザ自動化 | `--chrome` フラグまたは `/chrome` コマンド |
 | **キーバインドカスタマイズ** | カスタムキーバインド | `/keybindings` コマンド |
@@ -434,7 +437,7 @@ ls -la .claude/agents/
 head -20 .claude/agents/code-reviewer.md
 
 # MCP 接続をテスト
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 ```
 
 ---
@@ -445,10 +448,10 @@ echo $GITHUB_TOKEN
 |------|----------|---------|
 | 高速ショートカット | スラッシュコマンド (55 個以上) | `01-slash-commands/optimize.md` |
 | チーム標準 | メモリ | `02-memory/project-CLAUDE.md` |
-| 自動ワークフロー | スキル | `03-skills/code-review/` |
+| 自動ワークフロー | スキル | `03-skills/code-review-specialist/` |
 | 専門タスク | サブエージェント | `04-subagents/code-reviewer.md` |
 | 外部データ | MCP（+ Elicitation） | `05-mcp/github-mcp.json` |
-| イベント自動化 | フック (28 イベント、5 種類) | `06-hooks/pre-commit.sh` |
+| イベント自動化 | フック (33 イベント、5 種類) | `06-hooks/pre-commit.sh` |
 | 完全ソリューション | プラグイン (+ LSP サポート) | `07-plugins/pr-review/` |
 | 安全な実験 | チェックポイント | `08-checkpoints/checkpoint-examples.md` |
 | 完全自律 | Auto Mode | `--enable-auto-mode` または `Shift+Tab` |
@@ -509,11 +512,19 @@ A：もちろん。カスタマイズ用のテンプレートである。
 **このカード**：手元に置いてクイックリファレンスとして！
 
 ---
-**最終更新**：2026 年 4 月 24 日
-**Claude Code バージョン**：2.1.119
+**最終更新**：2026 年 10 月 18 日
+**Claude Code バージョン**：2.1.302
 **情報源**：
 - https://code.claude.com/docs/en/overview
 - https://code.claude.com/docs/en/hooks
 - https://code.claude.com/docs/en/commands
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.119
-**互換モデル**：Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/memory#storage-location
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/model-config
+**互換モデル**：Claude Fable 5、Claude Opus 5、Claude Sonnet 5、Claude Sonnet 4.6、Claude Opus 4.8、Claude Haiku 4.5

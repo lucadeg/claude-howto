@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-10 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Список корисних ресурсів
@@ -149,11 +149,11 @@ graph TD
     S --> T[Test Automation]
     T --> U[Repository Ready]
 
-    style A fill:#e1f5ff
-    style G fill:#fff4e1
-    style K fill:#f0ffe1
-    style Q fill:#ffe1f5
-    style U fill:#90EE90
+    style A fill:#e1f5fe,stroke:#333,color:#333
+    style G fill:#fff9c4,stroke:#333,color:#333
+    style K fill:#e8f5e9,stroke:#333,color:#333
+    style Q fill:#f3e5f5,stroke:#333,color:#333
+    style U fill:#e8f5e9,stroke:#333,color:#333
 ```
 
 #### Для існуючого репозиторію
@@ -214,12 +214,12 @@ graph TD
     Y -->|Yes| H
     Y -->|No| Z[Workflow Complete]
 
-    style A fill:#e1f5ff
-    style C fill:#ffecec
-    style D fill:#fff4e1
-    style P fill:#f0ffe1
-    style T fill:#ffe1f5
-    style Z fill:#90EE90
+    style A fill:#e1f5fe,stroke:#333,color:#333
+    style C fill:#fce4ec,stroke:#333,color:#333
+    style D fill:#fff9c4,stroke:#333,color:#333
+    style P fill:#e8f5e9,stroke:#333,color:#333
+    style T fill:#f3e5f5,stroke:#333,color:#333
+    style Z fill:#e8f5e9,stroke:#333,color:#333
 ```
 
 **Поради**:
@@ -239,17 +239,22 @@ graph TD
 | Функція | Опис | Дізнатися більше |
 |---------|------|------------------|
 | **Auto Memory** | Claude автоматично вивчає та запам'ятовує ваші уподобання між сесіями | [Посібник з пам'яті](02-memory/) |
-| **Remote Control** | Програмне управління сесіями Claude Code із зовнішніх інструментів та скриптів | [Просунуті функції](09-advanced-features/) |
+| **Remote Control** | Продовження локальної сесії Claude Code з телефона, браузера або застосунку Claude | [Просунуті функції](09-advanced-features/) |
 | **Web Sessions** | Доступ до Claude Code через браузерні інтерфейси для віддаленої розробки | [Довідник CLI](10-cli/) |
 | **Desktop App** | Нативний десктопний додаток Claude Code з покращеним UI | [Claude Code Docs](https://code.claude.com/docs/en/desktop) |
-| **Extended Thinking** | Перемикання глибокого мислення через `Alt+T`/`Option+T` або змінну `MAX_THINKING_TOKENS` | [Просунуті функції](09-advanced-features/) |
+| **Extended Thinking** | Перемикання глибокого мислення через `Alt+T`/`Option+T`; Opus 4.7+, Sonnet 5+, Haiku 5.5 і Fable завжди використовують адаптивне мислення, тож фіксований бюджет `MAX_THINKING_TOKENS` не застосовується (глибину керуйте через `/effort`) | [Просунуті функції](09-advanced-features/) |
 | **Permission Modes** | Тонке управління: default, acceptEdits, plan, auto, dontAsk, bypassPermissions | [Просунуті функції](09-advanced-features/) |
 | **7-Tier Memory** | Managed Policy, Project, Project Rules, User, User Rules, Local, Auto Memory | [Посібник з пам'яті](02-memory/) |
-| **Hook Events** | 25 подій: PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, Notification, Elicitation та інші | [Посібник з хуків](06-hooks/) |
+| **Hook Events** | 33 події: PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, Notification, Elicitation та інші | [Посібник з хуків](06-hooks/) |
 | **Agent Teams** | Координація кількох агентів для складних завдань | [Посібник з субагентів](04-subagents/) |
 | **Scheduled Tasks** | Налаштування повторюваних завдань з `/loop` та cron | [Просунуті функції](09-advanced-features/) |
-| **Chrome Integration** | Автоматизація браузера з headless Chromium | [Просунуті функції](09-advanced-features/) |
+| **Chrome Integration** | Автоматизація браузера у вашому Chrome через розширення Claude in Chrome | [Просунуті функції](09-advanced-features/) |
 | **Keyboard Customization** | Налаштування клавіатурних скорочень включаючи chord-послідовності | [Просунуті функції](09-advanced-features/) |
 
 ---
-**Останнє оновлення**: Квітень 2026
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/model-config

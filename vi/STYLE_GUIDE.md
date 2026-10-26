@@ -205,6 +205,9 @@ graph TD
 ### Quy Tắc / Rules
 
 - Sử dụng Mermaid cho tất cả các sơ đồ
+- GitHub render Mermaid trực tiếp; website và EPUB render cùng mã nguồn bằng [Pele](https://github.com/obsidianmd/pele) (phiên bản cố định trong `scripts/vendor_assets.py`), và hook `mermaid-syntax` của pre-commit kiểm tra mọi block bằng cùng bundle đó
+- Viết nhãn bằng văn bản thuần, nhãn có đánh số giữ nguyên (`["1. Load file"]`, không thêm dấu gạch chéo ngược trước dấu chấm)
+- Không dựa vào chỉ thị `%%{init}%%` hay theme của Mermaid: website dùng bảng màu sáng/tối riêng
 - Giữ sơ đồ đơn giản và dễ hiểu
 - Thêm mô tả text khi cần thiết
 - Test tất cả các sơ đồ trước khi commit

@@ -1,5 +1,4 @@
 ---
-name: Incident Response
 description: Обробка інцидентів на продакшені зі структурованим реагуванням
 ---
 
@@ -14,3 +13,11 @@ description: Обробка інцидентів на продакшені зі 
 5. Координація зусиль з реагування
 6. Документування розв'язання
 7. Планування post-mortem
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

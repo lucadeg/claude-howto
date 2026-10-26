@@ -40,7 +40,7 @@ tags: plugins, documentation, automation
 ## 安装
 
 ```bash
-/plugin install documentation
+claude --plugin-dir ./07-plugins/documentation
 ```
 
 ## 使用方式
@@ -74,7 +74,7 @@ tags: plugins, documentation, automation
 
 ## 需求
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - GitHub 访问权限（可选）
 
 ## 示例工作流
@@ -125,3 +125,11 @@ export GITHUB_TOKEN="your_github_token"
 - 提供可直接执行的示例
 - 定期校验文档有效性
 - 使用模板保持一致性
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

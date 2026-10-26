@@ -1,5 +1,4 @@
 ---
-name: Deploy
 description: 将应用部署到生产或预发环境
 ---
 
@@ -13,3 +12,11 @@ description: 将应用部署到生产或预发环境
 4. 部署到目标环境
 5. 运行健康检查
 6. 在 Slack 上通知团队
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

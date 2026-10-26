@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Checkpoints 与 Rewind
@@ -35,7 +35,7 @@ Checkpoints 会保存会话状态，让你可以安全地试验和探索多种�
 
 ### 使用 Slash Command
 
-使用 `/rewind` 命令（别名：`/checkpoint`）快速进入：
+使用 `/rewind` 命令（别名：`/checkpoint`、`/undo`）快速进入：
 
 ```bash
 # 打开 rewind 界面
@@ -60,7 +60,7 @@ Checkpoints 会保存会话状态，让你可以安全地试验和探索多种�
 Claude Code 会自动为你创建 checkpoints：
 
 - **每次用户提示** - 每次用户输入都会创建一个新 checkpoint
-- **持久保存** - checkpoints 会跨会话保留
+- **持久保存** - checkpoints 随对话一起保存，因此恢复会话后仍可使用 `/rewind`
 - **自动清理** - 30 天后自动清理旧 checkpoints
 
 这意味着你随时都可以回到之前的任意节点，从几分钟前到几天前都可以。
@@ -215,11 +215,11 @@ Claude Code 会自动管理你的 checkpoints：
 
 ```json
 {
-  "autoCheckpoint": true
+  "fileCheckpointingEnabled": true
 }
 ```
 
-- `autoCheckpoint`：是否在每次用户提示后自动创建 checkpoint（默认：`true`）
+- `fileCheckpointingEnabled`：是否在每次编辑前为文件创建快照，以便用 `/rewind` 恢复（默认：`true`）
 
 ## 局限性
 
@@ -263,7 +263,7 @@ Checkpoints 和 git 是互补关系：
 
 - `Esc` + `Esc`：打开 checkpoint 浏览器
 - `/rewind`：通过命令进入回退界面
-- `/checkpoint`：`/rewind` 的别名
+- `/checkpoint`、`/undo`：`/rewind` 的别名
 
 ## 什么时候该 rewind：上下文监控
 
@@ -290,3 +290,12 @@ Checkpoints 和 git 是互补关系：
 ## 总结
 
 Checkpoints 的价值在于让你敢于试错。它让“先试再说”和“试错后立刻回退”变得安全，从而帮你更快找到正确方案。
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/settings-reference

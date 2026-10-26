@@ -3,6 +3,17 @@
 # フック：PreToolUse（matcher: Bash）— コマンドが git commit か判定する
 # 注：「PreCommit」フックイベントは存在しない。PreToolUse と Bash matcher の組み合わせで
 # コマンドを検査し、git commit を検出する。
+#
+# 終了コード：2 はツール呼び出しをブロックし、stderr の内容をブロック理由として提示する。
+# それ以外の非ゼロ値は「ブロックしないエラー」であり、コミットはそのまま続行してしまう。
+# 出典：https://code.claude.com/docs/en/hooks
+
+# 標準入力からフックの JSON を読み取り、git commit コマンドのときだけテストを実行する
+INPUT=$(cat)
+COMMAND=$(echo "$INPUT" | sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+if ! echo "$COMMAND" | grep -q 'git commit'; then
+  exit 0
+fi
 
 echo "🧪 コミット前にテストを実行しています..."
 
@@ -11,8 +22,8 @@ if [ -f "package.json" ]; then
   if grep -q "\"test\":" package.json; then
     npm test
     if [ $? -ne 0 ]; then
-      echo "❌ テスト失敗。コミットをブロックします。"
-      exit 1
+      echo "❌ テスト失敗。コミットをブロックします。" >&2
+      exit 2
     fi
   fi
 fi
@@ -22,8 +33,8 @@ if [ -f "pytest.ini" ] || [ -f "setup.py" ]; then
   if command -v pytest &> /dev/null; then
     pytest
     if [ $? -ne 0 ]; then
-      echo "❌ テスト失敗。コミットをブロックします。"
-      exit 1
+      echo "❌ テスト失敗。コミットをブロックします。" >&2
+      exit 2
     fi
   fi
 fi
@@ -32,8 +43,8 @@ fi
 if [ -f "go.mod" ]; then
   go test ./...
   if [ $? -ne 0 ]; then
-    echo "❌ テスト失敗。コミットをブロックします。"
-    exit 1
+    echo "❌ テスト失敗。コミットをブロックします。" >&2
+    exit 2
   fi
 fi
 
@@ -41,8 +52,8 @@ fi
 if [ -f "Cargo.toml" ]; then
   cargo test
   if [ $? -ne 0 ]; then
-    echo "❌ テスト失敗。コミットをブロックします。"
-    exit 1
+    echo "❌ テスト失敗。コミットをブロックします。" >&2
+    exit 2
   fi
 fi
 

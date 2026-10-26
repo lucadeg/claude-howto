@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Плагіни Claude Code
@@ -47,7 +47,7 @@ sequenceDiagram
     participant Hooks
     participant Tools as Configured Tools
 
-    User->>Claude: /plugin install pr-review
+    User->>Claude: claude --plugin-dir ./07-plugins/pr-review
     Claude->>Plugin: Download plugin manifest
     Plugin-->>Claude: Return plugin definition
     Claude->>Install: Extract components
@@ -104,14 +104,16 @@ my-plugin/
 │   ├── specialist-2.md
 │   └── configs/
 ├── skills/               # Навички агентів з файлами SKILL.md
-│   ├── skill-1.md
-│   └── skill-2.md
+│   ├── skill-1/
+│   │   └── SKILL.md
+│   └── skill-2/
+│       └── SKILL.md
 ├── hooks/                # Обробники подій у hooks.json
 │   └── hooks.json
 ├── .mcp.json             # Конфігурації MCP-серверів
 ├── .lsp.json             # Конфігурації LSP-серверів для інтелектуальної роботи з кодом
 ├── bin/                  # Виконувані файли, додані до PATH інструменту Bash поки плагін увімкнено
-├── settings.json         # Стандартні налаштування при увімкненні плагіна (наразі підтримується лише ключ `agent`)
+├── settings.json         # Стандартні налаштування при увімкненні плагіна (діють лише ключі `agent` і `subagentStatusLine`)
 ├── templates/
 │   └── issue-template.md
 ├── scripts/
@@ -205,7 +207,7 @@ my-plugin/
 |--------|------|----------------------|---------------------|
 | `pyright-lsp` | Python | `pyright-langserver` | `pip install pyright` |
 | `typescript-lsp` | TypeScript/JavaScript | `typescript-language-server` | `npm install -g typescript-language-server typescript` |
-| `rust-lsp` | Rust | `rust-analyzer` | Встановлення через `rustup component add rust-analyzer` |
+| `rust-analyzer-lsp` | Rust | `rust-analyzer` | Встановлення через `rustup component add rust-analyzer` |
 
 #### Можливості LSP
 
@@ -226,10 +228,14 @@ my-plugin/
   "version": "1.0.0",
   "userConfig": {
     "apiKey": {
+      "type": "string",
+      "title": "API key",
       "description": "API key for the service",
       "sensitive": true
     },
     "region": {
+      "type": "string",
+      "title": "Region",
       "description": "Deployment region",
       "default": "us-east-1"
     }
@@ -246,43 +252,54 @@ my-plugin/
   "hooks": {
     "PostToolUse": [
       {
-        "command": "node ${CLAUDE_PLUGIN_DATA}/track-usage.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/track-usage.js \"${CLAUDE_PLUGIN_DATA}\"/usage.json"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-Каталог створюється автоматично при встановленні плагіна. Файли зберігаються до видалення плагіна.
+Каталог (`~/.claude/plugins/data/<id>/`) створюється під час першого звернення до нього та зберігається між оновленнями плагіна. Він видаляється, коли ви видаляєте плагін з останнього місця, де його встановлено (якщо не передати `--keep-data`).
 
 ## Інлайн-плагін через налаштування (`source: 'settings'`) (v2.1.80+)
 
-Плагіни можна визначати інлайн у файлах налаштувань як записи маркетплейсу з полем `source: 'settings'`. Це дозволяє вбудовувати визначення плагіна безпосередньо, без окремого репозиторію або маркетплейсу:
+Плагіни можна визначати інлайн у файлах налаштувань як записи маркетплейсу з полем `source: 'settings'`. Це дозволяє вбудовувати визначення плагіна безпосередньо, без окремого репозиторію або маркетплейсу. Оголосіть його в `extraKnownMarketplaces.<name>.source`; `name` має збігатися з ключем маркетплейсу, а його плагіни мають посилатися на зовнішні джерела, як-от GitHub або npm (відносні шляхи відхиляються):
 
 ```json
 {
-  "pluginMarketplaces": [
-    {
-      "name": "inline-tools",
-      "source": "settings",
-      "plugins": [
-        {
-          "name": "quick-lint",
-          "source": "./local-plugins/quick-lint"
-        }
-      ]
+  "extraKnownMarketplaces": {
+    "inline-tools": {
+      "source": {
+        "source": "settings",
+        "name": "inline-tools",
+        "plugins": [
+          {
+            "name": "quick-lint",
+            "source": {
+              "source": "github",
+              "repo": "my-org/quick-lint"
+            }
+          }
+        ]
+      }
     }
-  ]
+  }
 }
 ```
 
 ## Налаштування плагіна
 
-Плагіни можуть постачатися з файлом `settings.json` для стандартної конфігурації. Наразі підтримується ключ `agent`, який встановлює основного агента потоку для плагіна:
+Плагіни можуть постачатися з файлом `settings.json` для стандартної конфігурації. Діють два ключі, `agent` і `subagentStatusLine`; усі інші ключі відкидаються. `agent` приймає імʼя одного з агентів плагіна і запускає його як основний потік:
 
 ```json
 {
-  "agent": "agents/specialist-1.md"
+  "agent": "specialist-1"
 }
 ```
 
@@ -341,7 +358,7 @@ This command initiates a complete pull request review including:
 ---
 name: security-reviewer
 description: Security-focused code review
-tools: read, grep, diff
+tools: Read, Grep, Bash
 ---
 
 # Security Reviewer
@@ -356,7 +373,7 @@ Specializes in finding security vulnerabilities:
 **Встановлення:**
 
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # Результат:
 # ✅ 3 слеш-команди встановлено
@@ -382,13 +399,10 @@ devops-automation/
 │   ├── incident-commander.md
 │   └── alert-analyzer.md
 ├── mcp/
-│   ├── github-config.json
-│   ├── kubernetes-config.json
-│   └── prometheus-config.json
+│   └── kubernetes-config.json
 ├── hooks/
 │   ├── pre-deploy.js
-│   ├── post-deploy.js
-│   └── on-error.js
+│   └── post-deploy.js
 └── scripts/
     ├── deploy.sh
     ├── rollback.sh
@@ -411,8 +425,7 @@ documentation/
 │   ├── code-commentator.md
 │   └── example-generator.md
 ├── mcp/
-│   ├── github-docs-config.json
-│   └── slack-announce-config.json
+│   └── github-docs-config.json
 └── templates/
     ├── api-endpoint.md
     ├── function-docs.md
@@ -460,7 +473,11 @@ graph TB
 |-------------|------|
 | `extraKnownMarketplaces` | Додати додаткові джерела маркетплейсу крім стандартних |
 | `strictKnownMarketplaces` | Контролювати, які маркетплейси дозволено додавати користувачам |
-| `deniedPlugins` | Блок-список для запобігання встановленню конкретних плагінів (керований адміністратором) |
+| `enabledPlugins` (значення `false`) | Блокування конкретного плагіна: `"enabledPlugins": { "<plugin>@<marketplace>": false }` у керованих налаштуваннях блокує встановлення в усіх областях і приховує плагін у маркетплейсі |
+
+> **Дружніші аліаси (v2.1.232)**: `additionalMarketplaces` приймається як аліас для `extraKnownMarketplaces`, а `allowedMarketplaces` — для `strictKnownMarketplaces`. Офіційна довідка з налаштувань наводить обидва в розділі [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases). Старіші версії ігнорують аліаси, тож канонічні ключі безпечно використовувати й далі.
+
+> **Шаблони власника (v2.1.223+)**: запис `"owner/*"` дозволяє або блокує всі репозиторії маркетплейсів під одним власником GitHub. **Приймається лише у `strictKnownMarketplaces` та `blockedMarketplaces`.** Скрізь інде, де зʼявляється джерело `github` — включно з `extraKnownMarketplaces` і `/plugin marketplace add` — значення `repo` має вказувати на один репозиторій.
 
 ### Додаткові функції маркетплейсу
 
@@ -475,14 +492,14 @@ graph TB
 ```json
 {
   "name": "my-team-plugins",
-  "owner": "my-org",
+  "owner": { "name": "my-org" },
   "plugins": [
     {
       "name": "code-standards",
       "source": "./plugins/code-standards",
       "description": "Enforce team coding standards",
       "version": "1.2.0",
-      "author": "platform-team"
+      "author": { "name": "platform-team" }
     },
     {
       "name": "deploy-helper",
@@ -500,13 +517,13 @@ graph TB
 | Поле | Обовʼязкове | Опис |
 |------|-------------|------|
 | `name` | Так | Назва маркетплейсу в kebab-case |
-| `owner` | Так | Організація або користувач, що підтримує маркетплейс |
+| `owner` | Так | Організація або користувач, що підтримує маркетплейс: обʼєкт з обовʼязковим `name` (`email`, `url` необовʼязкові) |
 | `plugins` | Так | Масив записів плагінів |
 | `plugins[].name` | Так | Назва плагіна (kebab-case) |
 | `plugins[].source` | Так | Джерело плагіна (рядок шляху або обʼєкт джерела) |
 | `plugins[].description` | Ні | Короткий опис плагіна |
 | `plugins[].version` | Ні | Рядок семантичної версії |
-| `plugins[].author` | Ні | Імʼя автора плагіна |
+| `plugins[].author` | Ні | Автор плагіна: обʼєкт з обовʼязковим `name` (`email`, `url` необовʼязкові) |
 
 ### Типи джерел плагінів
 
@@ -519,7 +536,6 @@ graph TB
 | **Git URL** | `{ "source": "url", "url": "..." }` | `{ "source": "url", "url": "https://git.internal/plugin.git" }` |
 | **Підкаталог Git** | `{ "source": "git-subdir", "url": "...", "path": "..." }` | `{ "source": "git-subdir", "url": "https://github.com/org/monorepo.git", "path": "packages/plugin" }` |
 | **npm** | `{ "source": "npm", "package": "..." }` | `{ "source": "npm", "package": "@acme/claude-plugin", "version": "^2.0" }` |
-| **pip** | `{ "source": "pip", "package": "..." }` | `{ "source": "pip", "package": "claude-data-plugin", "version": ">=1.0" }` |
 
 Джерела GitHub та git підтримують необовʼязкові поля `ref` (гілка/тег) та `sha` (хеш коміту) для фіксації версій.
 
@@ -538,7 +554,7 @@ graph TB
 
 **Приватні репозиторії**: Підтримуються через git credential helpers або токени оточення. Користувачі повинні мати доступ на читання до репозиторію.
 
-**Подання до офіційного маркетплейсу**: Подавайте плагіни до курованого Anthropic маркетплейсу для ширшої дистрибуції через [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) або [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit).
+**Подання до каталогу Anthropic**: Подавайте плагіни до каталогу Anthropic для ширшої дистрибуції через портал розробника [claude.ai/directory/manage](https://claude.ai/directory/manage). Офіційний маркетплейс Anthropic `claude-plugins-official` не приймає подання через цей портал.
 
 ### Суворий режим (strict mode)
 
@@ -555,13 +571,13 @@ graph TB
 |----------|-------|
 | Не встановлено | Без обмежень — користувачі можуть додавати будь-який маркетплейс |
 | Порожній масив `[]` | Блокування — маркетплейси заборонені |
-| Масив патернів | Білий список — дозволено лише маркетплейси, що відповідають патернам |
+| Масив обʼєктів джерел | Білий список — дозволено лише маркетплейси, що відповідають записам |
 
 ```json
 {
   "strictKnownMarketplaces": [
-    "my-org/*",
-    "github.com/trusted-vendor/*"
+    { "source": "github", "repo": "my-org/*" },
+    { "source": "github", "repo": "trusted-vendor/*" }
   ]
 }
 ```
@@ -609,7 +625,7 @@ claude plugin uninstall <n>               # Видалити плагін
 claude plugin list                           # Список встановлених плагінів
 claude plugin enable <n>                  # Увімкнути вимкнений плагін
 claude plugin disable <n>                 # Вимкнути плагін
-claude plugin validate                       # Валідація структури плагіна
+claude plugin validate <path>                # Валідація структури плагіна за шляхом <path>
 ```
 
 ## Методи встановлення
@@ -636,7 +652,9 @@ claude --plugin-dir ./plugin-a --plugin-dir ./plugin-b
 
 ### З Git-репозиторію
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # Додайте GitHub-репозиторій як маркетплейс
+/plugin install plugin-name@marketplace-name             # Потім встановіть із нього плагін
+/plugin install plugin-name --marketplace username/repo  # Або обидва кроки за один раз (v2.1.275+)
 ```
 
 ## Коли створювати плагін
@@ -701,22 +719,27 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 | Налаштування | Опис |
 |-------------|------|
 | `enabledPlugins` | Білий список плагінів, увімкнених за замовчуванням |
-| `deniedPlugins` | Блок-список плагінів, які не можна встановити |
+| `enabledPlugins` (значення `false`) | Блокування конкретного плагіна: `"enabledPlugins": { "<plugin>@<marketplace>": false }` у керованих налаштуваннях блокує встановлення в усіх областях і приховує плагін у маркетплейсі |
 | `extraKnownMarketplaces` | Додаткові джерела маркетплейсу крім стандартних |
 | `strictKnownMarketplaces` | Обмеження маркетплейсів, які дозволено додавати користувачам |
-| `allowedChannelPlugins` | Контроль дозволених плагінів для кожного каналу випуску |
+| `allowedChannelPlugins` | Білий список плагінів [каналів](https://code.claude.com/docs/en/channels), яким дозволено надсилати повідомлення в сесії (кожен запис містить `marketplace` і `plugin`) |
+
+> **Дружніші аліаси (v2.1.232)**: `additionalMarketplaces` приймається як аліас для `extraKnownMarketplaces`, а `allowedMarketplaces` — для `strictKnownMarketplaces`. Офіційна довідка з налаштувань наводить обидва в розділі [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases). Старіші версії ігнорують аліаси, тож канонічні ключі безпечно використовувати й далі.
+
+> **Шаблони власника (v2.1.223+)**: запис `"owner/*"` дозволяє або блокує всі репозиторії маркетплейсів під одним власником GitHub. **Приймається лише у `strictKnownMarketplaces` та `blockedMarketplaces`.** Скрізь інде, де зʼявляється джерело `github` — включно з `extraKnownMarketplaces` і `/plugin marketplace add` — значення `repo` має вказувати на один репозиторій.
 
 Ці налаштування можна застосувати на рівні організації через файли керованої конфігурації, і вони мають пріоритет над налаштуваннями рівня користувача.
 
 ## Безпека плагінів
 
-Субагенти плагінів працюють в обмеженій пісочниці (sandbox). Наступні ключі frontmatter **заборонені** у визначеннях субагентів плагінів:
+Субагенти плагінів **ігнорують** наступні ключі frontmatter (агент усе одно завантажується; ці ключі не діють):
 
 - `hooks` — субагенти не можуть реєструвати обробники подій
 - `mcpServers` — субагенти не можуть налаштовувати MCP-сервери
 - `permissionMode` — субагенти не можуть перевизначати модель дозволів
+- `initialPrompt` — агенти плагінів не можуть автоматично надсилати перший промпт
 
-Це гарантує, що плагіни не можуть підвищити привілеї або модифікувати хост-середовище за межами оголошеної області.
+Файл агента не може сам додати хуки чи MCP-сервери; постачайте їх як хуки та MCP-сервери рівня плагіна.
 
 ## Публікація плагіна
 
@@ -733,7 +756,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 **Приклад подання:**
 
-```markdown
+````markdown
 # PR Review Plugin
 
 ## Description
@@ -747,7 +770,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ## Installation
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ## Features
@@ -765,10 +788,10 @@ Complete PR review workflow with security, testing, and documentation checks.
 ```
 
 ## Requirements
-- Claude Code 1.0+
+- Claude Code 2.1+
 - GitHub access
 - CodeQL (optional)
-```
+````
 
 ## Плагін vs ручна конфігурація
 
@@ -782,7 +805,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 **З плагіном (2 хвилини):**
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # ✅ Все встановлено та налаштовано
 # ✅ Готово до використання одразу
 # ✅ Команда може відтворити точну конфігурацію
@@ -818,43 +841,56 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ### Встановлення з маркетплейсу
 
-1. **Перегляд доступних плагінів:**
+1. **Перегляд доступних плагінів** (вкладка **Discover** показує плагіни з ваших маркетплейсів; `/plugin list` показує лише встановлені плагіни):
    ```bash
-   /plugin list
+   /plugin
    ```
 
-2. **Деталі плагіна:**
-   ```bash
-   /plugin info plugin-name
-   ```
+2. **Деталі плагіна:** виберіть плагін на вкладці **Discover**, щоб відкрити його деталі. (`claude plugin details plugin-name` працює лише для завантаженого плагіна: встановленого або переданого через `--plugin-dir`.)
 
 3. **Встановлення плагіна:**
    ```bash
    /plugin install plugin-name
    ```
 
+**Чи набуде чинності одразу?** Починаючи з **v2.1.221** — зазвичай так. Прочитайте останній рядок підсумку встановлення:
+
+| Підсумок встановлення каже | Що це означає |
+|---|---|
+| `Plugin is now active.` | Claude Code активував плагін під час встановлення. Більше нічого робити не треба. |
+| `Run /reload-plugins to activate.` | Плагін встановлено, але він ще не активний — або активація знецінила б prompt cache, або спроба активації не вдалася. |
+
+До v2.1.221 жодне встановлення не набувало чинності в поточній сесії, доки ви не запускали `/reload-plugins` або не перезапускали Claude Code.
+
 ### Встановлення з локального шляху
 
 ```bash
-/plugin install ./path/to/plugin-directory
+# /plugin install потребує name@marketplace; шлях дає помилку "marketplace not found"
+claude --plugin-dir ./path/to/plugin-directory
 ```
 
 ### Встановлення з GitHub
 
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # Додайте GitHub-репозиторій як маркетплейс
+/plugin install plugin-name@marketplace-name             # Потім встановіть із нього плагін
+/plugin install plugin-name --marketplace username/repo  # Або обидва кроки за один раз (v2.1.275+)
 ```
 
 ### Список встановлених плагінів
 
 ```bash
-/plugin list --installed
+/plugin list             # усі встановлені плагіни
+/plugin list --enabled   # лише увімкнені плагіни
+/plugin list --disabled  # лише вимкнені плагіни
 ```
 
 ### Оновлення плагіна
 
+Використовуйте форму CLI — саме її задокументовано в розділі [`plugin update`](https://code.claude.com/docs/en/plugins-reference) і саме її пропонує сам Claude Code, коли з'являється оновлення:
+
 ```bash
-/plugin update plugin-name
+claude plugin update plugin-name
 ```
 
 ### Вимкнення/Увімкнення плагіна
@@ -908,7 +944,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 ## Усунення несправностей
 
 ### Плагін не встановлюється
-- Перевірте сумісність версії Claude Code: `/version`
+- Перевірте сумісність версії Claude Code: `claude --version`
 - Перевірте синтаксис `plugin.json` валідатором JSON
 - Перевірте підключення до інтернету (для віддалених плагінів)
 - Перевірте дозволи: `ls -la plugin/`
@@ -917,18 +953,18 @@ Complete PR review workflow with security, testing, and documentation checks.
 - Переконайтеся, що шляхи в `plugin.json` відповідають фактичній структурі каталогів
 - Перевірте дозволи файлів: `chmod +x scripts/`
 - Перегляньте синтаксис файлів компонентів
-- Перевірте журнали: `/plugin debug plugin-name`
+- Перевірте інвентар компонентів: `claude plugin details plugin-name`
 
 ### Збій підключення MCP
 - Переконайтеся, що змінні оточення встановлені правильно
 - Перевірте встановлення та працездатність MCP-сервера
-- Протестуйте підключення MCP окремо за допомогою `/mcp test`
+- Перевірте стан MCP-серверів за допомогою `/mcp`
 - Перегляньте конфігурацію MCP у каталозі `mcp/`
 
 ### Команди недоступні після встановлення
-- Переконайтеся, що плагін встановлено успішно: `/plugin list --installed`
-- Перевірте, чи плагін увімкнено: `/plugin status plugin-name`
-- Перезапустіть Claude Code: `exit` та відкрийте знову
+- Переконайтеся, що плагін встановлено успішно: `/plugin list`
+- Перевірте, чи плагін увімкнено: `/plugin list --enabled`
+- Перевірте, чи плагін уже активний — див. підсумок встановлення в розділі [Інструкції зі встановлення](#інструкції-зі-встановлення): `Plugin is now active.` — нічого робити не треба, `Run /reload-plugins to activate.` — запустіть цю команду (перезапуск не потрібен)
 - Перевірте конфлікти назв з існуючими командами
 
 ### Проблеми з виконанням хуків
@@ -948,6 +984,17 @@ Complete PR review workflow with security, testing, and documentation checks.
 - [Довідник системи хуків](../06-hooks/README.md)
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
-**Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/discover-plugins
+- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/manifest-reference
+- https://code.claude.com/docs/en/plugins/marketplace-reference
+- https://code.claude.com/docs/en/plugins/components
+- https://code.claude.com/docs/en/plugins/publish
+- https://code.claude.com/docs/en/plugins/overview
+**Сумісні моделі**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

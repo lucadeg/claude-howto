@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # CLI 参考
@@ -40,7 +40,8 @@ graph TD
 | `claude mcp serve` | 将 Claude Code 作为 MCP server 运行 | `claude mcp serve` |
 | `claude agents` | 列出所有已配置的 subagents | `claude agents` |
 | `claude auto-mode defaults` | 以 JSON 打印 auto mode 默认规则 | `claude auto-mode defaults` |
-| `claude remote-control` | 启动远程控制服务 | `claude remote-control` |
+| `claude remote-control` | 启动 Remote Control 服务器（服务器模式，没有本地交互式会话；可服务多个会话，`--capacity` 默认 32） | `claude remote-control --name "My Project"` |
+| `claude --remote-control [name]` | 启动启用了 Remote Control 的交互式会话（别名 `--rc`） | `claude --rc` |
 | `claude plugin` | 管理插件（安装、启用、禁用） | `claude plugin install my-plugin` |
 | `claude auth login` | 登录（支持 `--email`、`--sso`） | `claude auth login --email user@example.com` |
 | `claude auth logout` | 注销当前账号 | `claude auth logout` |
@@ -57,17 +58,18 @@ graph TD
 | `-w, --worktree` | 在隔离的 git worktree 中启动 | `claude -w` |
 | `-n, --name` | 设置会话显示名称 | `claude -n "auth-refactor"` |
 | `--from-pr <number>` | 恢复与 GitHub PR 关联的会话 | `claude --from-pr 42` |
-| `--remote "task"` | 在 claude.ai 上创建 web session | `claude --remote "implement API"` |
+| `--cloud [description\|session_id\|url]` | 使用给定描述在 claude.ai 上创建云会话，或通过 session ID / claude.ai/code URL 接入已有会话 | `claude --cloud "implement API"` |
+| `--remote "task"` | **`--cloud` 的已弃用别名**（包括接入已有会话的形式）。请改用 `--cloud` | `claude --remote "implement API"` |
 | `--remote-control, --rc` | 使用 Remote Control 进入交互式会话 | `claude --rc` |
 | `--teleport` | 将 web session 恢复到本地 | `claude --teleport` |
 | `--teammate-mode` | agent team 显示模式 | `claude --teammate-mode tmux` |
 | `--bare` | 极简模式，跳过 hooks、skills、plugins、MCP、自动记忆和 `CLAUDE.md` | `claude --bare` |
 | `--enable-auto-mode` | 解锁 auto permission mode | `claude --enable-auto-mode` |
-| `--channels` | 订阅 MCP channel 插件 | `claude --channels discord,telegram` |
+| `--channels` | 订阅 MCP channel 插件。每一项必须写成 `plugin:<name>@<marketplace>` 的带标签形式；仅写名称会被拒绝 | `claude --channels plugin:discord@my-marketplace` |
 | `--chrome` / `--no-chrome` | 启用 / 禁用 Chrome 浏览器集成 | `claude --chrome` |
 | `--effort` | 设置推理强度 | `claude --effort high` |
-| `--init` / `--init-only` | 运行初始化 hooks | `claude --init` |
-| `--maintenance` | 运行维护 hooks 后退出 | `claude --maintenance` |
+| `--init` / `--init-only` | `--init` 在会话开始前运行初始化（Setup）hooks，仅限打印模式；`--init-only` 运行 Setup 和 `SessionStart` hooks 后退出 | `claude -p --init "query"` |
+| `--maintenance` | 在会话开始前运行维护（Setup）hooks（仅限打印模式） | `claude -p --maintenance "query"` |
 | `--disable-slash-commands` | 禁用所有 skills 和 slash commands | `claude --disable-slash-commands` |
 | `--no-session-persistence` | 禁用会话保存（打印模式） | `claude -p --no-session-persistence "query"` |
 
@@ -115,14 +117,14 @@ claude -p "列出待办事项" | grep "URGENT"
 ### 模型选择示例
 
 ```bash
-# 复杂任务使用 Opus 4.6
+# 复杂任务使用 Opus 5.5
 claude --model opus "设计一个缓存策略"
 
-# 快速任务使用 Haiku 4.5
+# 快速任务使用 Haiku（自 v2.1.293 起在 Anthropic API 上为 Haiku 5.5；在 Bedrock、Vertex 和 Foundry 上为 Haiku 4.5）
 claude --model haiku -p "格式化这个 JSON"
 
 # 使用完整模型名
-claude --model claude-sonnet-4-6-20250929 "审查这段代码"
+claude --model claude-sonnet-4-6 "审查这段代码"
 
 # 带后备模型以提升稳定性
 claude -p --model opus --fallback-model sonnet "分析架构"
@@ -136,7 +138,7 @@ claude --model opusplan "设计并实现缓存层"
 | 参数 | 说明 | 示例 |
 |------|-------------|---------|
 | `--system-prompt` | 替换整段默认系统提示词 | `claude --system-prompt "You are a Python expert"` |
-| `--system-prompt-file` | 从文件加载提示词（仅打印模式） | `claude -p --system-prompt-file ./prompt.txt "query"` |
+| `--system-prompt-file` | 从文件加载提示词，替换默认提示词 | `claude -p --system-prompt-file ./prompt.txt "query"` |
 | `--append-system-prompt` | 在默认提示词后追加内容 | `claude --append-system-prompt "Always use TypeScript"` |
 
 ### 系统提示词示例
@@ -157,10 +159,10 @@ claude -p --system-prompt-file ./prompts/code-reviewer.txt "review main.py"
 | 参数 | 行为 | 交互模式 | 打印模式 |
 |------|----------|-------------|-------|
 | `--system-prompt` | 替换整个默认系统提示词 | ✅ | ✅ |
-| `--system-prompt-file` | 用文件中的提示词替换 | ❌ | ✅ |
+| `--system-prompt-file` | 用文件中的提示词替换 | ✅ | ✅ |
 | `--append-system-prompt` | 追加到默认系统提示词后 | ✅ | ✅ |
 
-**仅在打印模式中使用 `--system-prompt-file`。交互模式请使用 `--system-prompt` 或 `--append-system-prompt`。**
+**所有系统提示词标志都可在交互模式和打印模式中使用（文件形式自 v2.1.69 起）。`--system-prompt` 和 `--system-prompt-file` 会替换默认提示词；append 类标志则在其基础上追加。**
 
 ## 工具与权限管理
 
@@ -199,7 +201,7 @@ claude --disallowedTools "Bash(rm -rf:*)" "Bash(git push --force:*)"
 | `--verbose` | 启用详细日志 |  | `claude --verbose` |
 | `--include-partial-messages` | 包含流式事件 | 需要 `stream-json` | `claude -p --output-format stream-json --include-partial-messages "query"` |
 | `--json-schema` | 获取符合 schema 的 JSON 输出 |  | `claude -p --json-schema '{"type":"object"}' "query"` |
-| `--max-budget-usd` | 打印模式最大花费 |  | `claude -p --max-budget-usd 5.00 "query"` |
+| `--max-budget-usd` | 打印模式最大花费。自 v2.1.217 起，达到上限后也会停止正在运行的后台子代理，并拒绝新的子代理生成请求（此前后台代理在超出上限后仍会继续运行） |  | `claude -p --max-budget-usd 5.00 "query"` |
 
 ### 输出格式示例
 
@@ -491,8 +493,8 @@ claude --tools "Read,Grep,Glob" -p "inspect the codebase"
 # 获取结构化分析结果
 claude -p --output-format json "analyze this code and return findings"
 
-# 配合 jq 处理
-claude -p --output-format json "list functions" | jq '.functions[]'
+# 配合 jq 处理（schema 输出位于 .structured_output）
+claude -p --output-format json --json-schema "$SCHEMA" "list functions" | jq '.structured_output.functions[]'
 
 # 在脚本中使用
 result=$(claude -p --output-format json "summarize changes")
@@ -500,30 +502,32 @@ result=$(claude -p --output-format json "summarize changes")
 
 ### jq 解析示例
 
+响应文本位于 `.result`；配合 `--json-schema` 时，校验后的对象位于 `.structured_output`（下文的 `$SCHEMA` 表示定义了各过滤器所读字段的 schema）：
+
 ```bash
-# 提取特定字段
-claude -p --output-format json "analyze repo" | jq '.summary'
+# 提取响应文本
+claude -p --output-format json "analyze repo" | jq -r '.result'
 
 # 过滤数组元素
-claude -p --output-format json "find bugs" | jq '.bugs[] | select(.severity=="high")'
+claude -p --output-format json --json-schema "$SCHEMA" "find bugs" | jq '.structured_output.bugs[] | select(.severity=="high")'
 
 # 提取多个字段
-claude -p --output-format json "analyze" | jq '{summary, risk, recommendations}'
+claude -p --output-format json --json-schema "$SCHEMA" "analyze" | jq '.structured_output | {summary, risk, recommendations}'
 
 # 转成 CSV
-claude -p --output-format json "list files" | jq -r '.files[] | [.name, .size] | @csv'
+claude -p --output-format json --json-schema "$SCHEMA" "list files" | jq -r '.structured_output.files[] | [.name, .size] | @csv'
 
 # 条件处理
-claude -p --output-format json "check status" | jq 'if .ok then "pass" else "fail" end'
+claude -p --output-format json --json-schema "$SCHEMA" "check status" | jq 'if .structured_output.ok then "pass" else "fail" end'
 
 # 提取嵌套值
-claude -p --output-format json "inspect" | jq '.details.metrics.coverage'
+claude -p --output-format json --json-schema "$SCHEMA" "inspect" | jq '.structured_output.details.metrics.coverage'
 
 # 处理整个数组
-claude -p --output-format json "find todos" | jq '.todos | length'
+claude -p --output-format json --json-schema "$SCHEMA" "find todos" | jq '.structured_output.todos | length'
 
 # 转换输出
-claude -p --output-format json "review" | jq '{issues: [.issues[] | {file, line, message}]}'
+claude -p --output-format json --json-schema "$SCHEMA" "review" | jq '.structured_output | {issues: [.issues[] | {file, line, message}]}'
 ```
 
 ## 模型
@@ -638,3 +642,14 @@ claude --working-directory ./backend --mcp-config ./mcp.json
 - [Slash Commands 中文参考](../01-slash-commands/README.md)
 - [MCP 文档](../05-mcp/README.md)
 - [Claude Code 官方 CLI 文档](https://code.claude.com/docs/en/cli-reference)
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/headless
+- https://platform.claude.com/docs/en/about-claude/models/overview
+- https://code.claude.com/docs/en/model-config
+- https://code.claude.com/docs/en/remote-control

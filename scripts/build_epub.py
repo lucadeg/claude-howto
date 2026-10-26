@@ -17,7 +17,7 @@ Usage:
         --root, -r      Root directory containing markdown files (default: repo root)
         --output, -o    Output EPUB file path (default: <root>/claude-howto-guide.epub)
         --verbose, -v   Enable verbose logging
-        --mmdc-path     Path to mmdc binary (default: mmdc from PATH)
+        --lang          Language tree to build: en, vi, zh or ja (default: en)
 
     The script uses inline script dependencies (PEP 723), so uv will
     automatically install required packages in an isolated environment.
@@ -27,15 +27,19 @@ Output:
 
 Features:
     - Organizes chapters by folder structure (01-slash-commands, etc.)
-    - Renders Mermaid diagrams as PNG images via local mmdc CLI (no network required)
+    - Renders Mermaid diagrams as SVG images with the pinned Pele bundle; CSS
+      variables are flattened to literal colours on an opaque white canvas so
+      every EPUB reader shows them
     - Generates a cover image from the project logo
     - Converts internal markdown links to EPUB chapter references
-    - Handles SVG images by replacing with styled placeholders
+    - Embeds SVG images referenced by the Markdown as EPUB image resources
     - Strict error mode: fails if any diagram cannot be rendered
 
 Requirements:
     - uv (recommended) or Python 3.10+ with dependencies installed
-    - @mermaid-js/mermaid-cli installed globally: npm install -g @mermaid-js/mermaid-cli
+    - Node.js >= 20 on PATH. The pinned Pele bundle is downloaded on first run
+      (network needed once), checksum-verified, and cached in
+      scripts/.vendor-cache/pele/; later builds work offline
     - Repository structure with markdown files and claude-howto-logo.png
 """
 
@@ -46,10 +50,11 @@ import html
 import logging
 import os
 import re
-import shutil
-import subprocess  # nosec B404
 import sys
-import tempfile
+
+# Parses SVG produced moments ago by the pinned, checksum-verified Pele
+# bundle from this repo's own Markdown, not untrusted input.
+import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -58,6 +63,12 @@ import markdown
 from bs4 import BeautifulSoup
 from ebooklib import epub
 from PIL import Image, ImageDraw, ImageFont
+
+# Make sibling script modules importable regardless of cwd.
+sys.path.insert(0, str(Path(__file__).parent))
+
+from pele_renderer import PeleHelperError, PeleUnavailableError, render_diagrams
+from vendor_assets import PELE_VERSION
 
 # =============================================================================
 # Custom Exceptions
@@ -124,10 +135,6 @@ class EPUBConfig:
     cover_bg_color: tuple[int, int, int] = (26, 26, 46)
     cover_title_color: tuple[int, int, int] = (78, 205, 196)
     cover_subtitle_color: tuple[int, int, int] = (168, 178, 209)
-
-    # Local rendering settings
-    mmdc_path: str = "mmdc"
-    puppeteer_config: str | None = None
 
     # Font paths (platform-specific)
     title_font_paths: list[str] = field(
@@ -240,24 +247,148 @@ def validate_inputs(config: EPUBConfig, logger: logging.Logger) -> None:
 
 
 # =============================================================================
-# Mermaid Rendering (Local mmdc)
+# Mermaid Rendering (Pele)
 # =============================================================================
 
+SVG_NS = "http://www.w3.org/2000/svg"
+ET.register_namespace("", SVG_NS)
 
-def sanitize_mermaid(mermaid_code: str) -> str:
-    """Sanitize mermaid code to avoid markdown parsing issues.
+# Pele measures label widths with Arial metrics, so keep a metric-compatible
+# stack: EPUB readers cannot see the website's web fonts.
+EPUB_DIAGRAM_FONT = "Arial, Helvetica, 'Liberation Sans', sans-serif"
 
-    Mermaid's markdown-in-nodes feature incorrectly interprets numbered
-    lists (e.g., "1. Item") inside node labels. This escapes the period
-    to prevent that.
+_ALIAS_DECL_RE = re.compile(
+    r"^(--_[a-z0-9]+)\s*:\s*var\(\s*(--pele-[a-z0-9-]+)\s*,\s*(.+?)\s*\)$"
+)
+# Digits matter: series colours are `--pele-series-1`, `--pele-series-2`, ...
+_PELE_VAR_RE = re.compile(r"var\(\s*(--pele-[a-z0-9-]+)\s*,\s*([^()]+?)\s*\)")
+_ALIAS_REF_RE = re.compile(r"var\(\s*(--_[a-z0-9]+)\s*\)")
+_COLOR_MIX_RE = re.compile(
+    r"color-mix\(\s*in srgb\s*,\s*(#[0-9a-fA-F]{3,6})\s+(\d+(?:\.\d+)?)%"
+    r"\s*,\s*(#[0-9a-fA-F]{3,6})\s*\)"
+)
+
+
+def _hex_to_rgb(color: str) -> list[int]:
+    value = color.lstrip("#")
+    if len(value) == 3:
+        value = "".join(ch * 2 for ch in value)
+    return [int(value[i : i + 2], 16) for i in (0, 2, 4)]
+
+
+def _mix_colors(match: re.Match[str]) -> str:
+    first = _hex_to_rgb(match.group(1))
+    weight = float(match.group(2)) / 100
+    second = _hex_to_rgb(match.group(3))
+    return "#" + "".join(
+        f"{round(a * weight + b * (1 - weight)):02x}"
+        for a, b in zip(first, second, strict=True)
+    )
+
+
+def flatten_svg_vars(svg: str, theme: dict[str, str] | None = None) -> str:
+    """Resolve Pele's CSS custom properties to literal values for EPUB readers.
+
+    EPUB readers do not reliably support CSS variables, which Pele uses for
+    every colour. This parses the SVG and, in ATTRIBUTE VALUES ONLY (text
+    nodes are never touched, so a label such as ``claude --model: opus``
+    survives), resolves ``var(--pele-x, fallback)`` to the ``theme`` override
+    or the fallback, ``var(--_x)`` aliases to their resolved value, and
+    ``color-mix(in srgb, ...)`` to a hex colour. The custom-property
+    declarations are dropped from the root ``style``, ``style="rx:..."`` becomes
+    an ``rx`` attribute, the font becomes ``EPUB_DIAGRAM_FONT``, and an opaque
+    background ``<rect>`` covering the viewBox is inserted as the first child so
+    dark-mode readers keep edges and text visible. The default theme is Pele's
+    own fallbacks (white background).
     """
-    # Escape numbered list patterns inside brackets: [1. Text] -> [1\. Text]
-    sanitized = re.sub(r'\[(["\']?)(\d+)\.(\s)', r"[\1\2\\.\3", mermaid_code)
-    return sanitized
+    theme = theme or {}
+    try:
+        root = ET.fromstring(svg)  # nosec B314
+    except ET.ParseError as exc:
+        raise MermaidRenderError(f"Pele produced invalid SVG: {exc}") from exc
+
+    aliases = _strip_root_custom_properties(root, theme)
+
+    def resolve_pele_var(match: re.Match[str]) -> str:
+        if match.group(1) == "--pele-font":
+            return EPUB_DIAGRAM_FONT
+        return theme.get(match.group(1), match.group(2))
+
+    def resolve_alias(match: re.Match[str]) -> str:
+        if match.group(1) not in aliases:
+            raise MermaidRenderError(
+                f"Pele SVG references undefined CSS variable {match.group(1)}"
+            )
+        return aliases[match.group(1)]
+
+    for element in root.iter():
+        for name, value in list(element.attrib.items()):
+            if "var(" not in value and "color-mix" not in value:
+                continue
+            flat = _PELE_VAR_RE.sub(resolve_pele_var, value)
+            flat = _ALIAS_REF_RE.sub(resolve_alias, flat)
+            flat = _COLOR_MIX_RE.sub(_mix_colors, flat)
+            if "var(" in flat or "color-mix" in flat:
+                raise MermaidRenderError(
+                    f"Could not flatten CSS in Pele SVG attribute {name}={flat!r}"
+                )
+            element.set(name, flat)
+        _move_radius_to_attribute(element)
+
+    _insert_background(root, theme.get("--pele-bg", aliases.get("--_bg", "#fff")))
+    return ET.tostring(root, encoding="unicode")
+
+
+def _strip_root_custom_properties(
+    root: ET.Element, theme: dict[str, str]
+) -> dict[str, str]:
+    """Drop `--*` declarations from the root style; return resolved aliases."""
+    aliases: dict[str, str] = {}
+    kept: list[str] = []
+    for decl in (d.strip() for d in root.get("style", "").split(";")):
+        if not decl:
+            continue
+        match = _ALIAS_DECL_RE.match(decl)
+        if match:
+            aliases[match.group(1)] = theme.get(match.group(2), match.group(3))
+        elif not decl.startswith("--"):
+            kept.append(decl)
+    root.set("style", ";".join(kept))
+    return aliases
+
+
+def _move_radius_to_attribute(element: ET.Element) -> None:
+    """Turn `style="rx:4px;..."` into `rx="4"`, keeping other declarations."""
+    style = element.get("style")
+    if not style or not style.startswith("rx:"):
+        return
+    radius, _, rest = style.partition(";")
+    element.set("rx", radius[3:].strip().removesuffix("px"))
+    if rest.strip():
+        element.set("style", rest)
+    else:
+        del element.attrib["style"]
+
+
+def _insert_background(root: ET.Element, color: str) -> None:
+    """Insert an opaque `<rect>` covering the viewBox as the first child."""
+    view_box = (root.get("viewBox") or "").split()
+    if len(view_box) != 4:
+        raise MermaidRenderError(
+            f"Pele SVG has a missing or malformed viewBox: {root.get('viewBox')!r}"
+        )
+    x, y, width, height = view_box
+    root.insert(
+        0,
+        ET.Element(
+            f"{{{SVG_NS}}}rect",
+            {"x": x, "y": y, "width": width, "height": height, "fill": color},
+        ),
+    )
 
 
 class MermaidRenderer:
-    """Renders Mermaid diagrams locally via the mmdc CLI (no network required)."""
+    """Renders Mermaid diagrams to flattened SVG with the pinned Pele bundle."""
 
     def __init__(
         self, config: EPUBConfig, state: BuildState, logger: logging.Logger
@@ -266,89 +397,62 @@ class MermaidRenderer:
         self.state = state
         self.logger = logger
 
-    def _resolve_mmdc(self) -> str:
-        """Resolve the mmdc binary path, raising if not found."""
-        mmdc = shutil.which(self.config.mmdc_path) or self.config.mmdc_path
-        if not shutil.which(mmdc):
-            raise MermaidRenderError(
-                f"mmdc not found at '{self.config.mmdc_path}'. "
-                "Install it with: npm install -g @mermaid-js/mermaid-cli"
-            )
-        return mmdc
-
-    def _render_one(
-        self, mmdc: str, mermaid_code: str, index: int
-    ) -> tuple[bytes, str]:
-        """Render a single Mermaid diagram to PNG bytes using mmdc."""
-        cache_key = mermaid_code.strip()
-        if cache_key in self.state.mermaid_cache:
-            self.logger.debug(f"Cache hit for diagram {index}")
-            return self.state.mermaid_cache[cache_key]
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            input_file = Path(tmpdir) / "diagram.mmd"
-            output_file = Path(tmpdir) / "diagram.png"
-            input_file.write_text(mermaid_code, encoding="utf-8")
-
-            try:
-                cmd = [
-                    mmdc,
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",
-                ]
-                if self.config.puppeteer_config:
-                    cmd += ["-p", self.config.puppeteer_config]
-                result = subprocess.run(  # nosec B603
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    timeout=60,
-                )
-            except subprocess.TimeoutExpired as exc:
-                raise MermaidRenderError(
-                    f"mmdc timed out rendering diagram {index} (60s limit)"
-                ) from exc
-
-            if result.returncode != 0:
-                raise MermaidRenderError(
-                    f"mmdc failed for diagram {index}: {result.stderr.strip()}"
-                )
-
-            if not output_file.exists():
-                raise MermaidRenderError(f"mmdc produced no output for diagram {index}")
-
-            png_bytes = output_file.read_bytes()
-
-        self.state.mermaid_counter += 1
-        img_name = f"mermaid_{self.state.mermaid_counter}.png"
-        entry = (png_bytes, img_name)
-        self.state.mermaid_cache[cache_key] = entry
-        self.logger.info(f"Rendered diagram {index} -> {img_name}")
-        return entry
-
     def render_all(
         self, diagrams: list[tuple[int, str]]
     ) -> dict[str, tuple[bytes, str]]:
-        """Render all Mermaid diagrams using local mmdc."""
-        mmdc = self._resolve_mmdc()
-        results: dict[str, tuple[bytes, str]] = {}
+        """Render every diagram with ONE Pele call; cache SVG bytes by source.
 
-        self.logger.info(f"Rendering {len(diagrams)} Mermaid diagrams locally...")
+        Returns ``{code.strip(): (svg_bytes, "mermaid_N.svg")}``. Any diagram
+        Pele rejects, or Pele being unavailable, raises MermaidRenderError.
+        """
+        pending: dict[str, int] = {}
         for idx, code in diagrams:
-            sanitized = sanitize_mermaid(code)
-            cache_key = sanitized.strip()
-            data = self._render_one(mmdc, sanitized, idx)
-            results[cache_key] = data
+            key = code.strip()
+            if key not in self.state.mermaid_cache and key not in pending:
+                pending[key] = idx
 
+        if pending:
+            sources = list(pending)
+            self.logger.info(
+                f"Rendering {len(sources)} Mermaid diagrams with Pele {PELE_VERSION}..."
+            )
+            try:
+                results = render_diagrams(sources, self.logger)
+            except PeleUnavailableError as exc:
+                raise MermaidRenderError(
+                    f"Pele is unavailable: {exc}. The EPUB build needs Node.js >= 20 "
+                    "and network access the first time, to download the bundle."
+                ) from exc
+            except PeleHelperError as exc:
+                raise MermaidRenderError(f"Pele helper failed: {exc}") from exc
+
+            failures = [
+                f"Pele failed for diagram {pending[source]}: {result.error.describe()}"
+                for source, result in zip(sources, results, strict=True)
+                if result.error is not None
+            ]
+            if failures:
+                raise MermaidRenderError("\n".join(failures))
+
+            for source, result in zip(sources, results, strict=True):
+                if result.svg is None:
+                    raise MermaidRenderError(
+                        f"Pele returned no SVG for diagram {pending[source]}"
+                    )
+                svg_bytes = flatten_svg_vars(result.svg).encode("utf-8")
+                self.state.mermaid_counter += 1
+                img_name = f"mermaid_{self.state.mermaid_counter}.svg"
+                self.state.mermaid_cache[source] = (svg_bytes, img_name)
+                self.logger.debug(f"Rendered diagram {pending[source]} -> {img_name}")
+
+        rendered = {
+            code.strip(): self.state.mermaid_cache[code.strip()] for _, code in diagrams
+        }
         self.logger.info(
-            f"Successfully rendered {len(results)} unique diagrams ({len(diagrams)} total blocks)"
+            f"Rendered {len(rendered)} unique Mermaid diagrams with Pele "
+            f"{PELE_VERSION} ({len(diagrams)} blocks)"
         )
-        return results
+        return rendered
 
 
 def extract_all_mermaid_blocks(
@@ -725,8 +829,7 @@ def process_mermaid_blocks(
     pattern = r"```mermaid\n(.*?)```"
 
     def replace_mermaid(match: re.Match[str]) -> str:
-        mermaid_code = sanitize_mermaid(match.group(1))
-        cache_key = mermaid_code.strip()
+        cache_key = match.group(1).strip()
 
         if cache_key in state.mermaid_cache:
             img_data, img_name = state.mermaid_cache[cache_key]
@@ -735,7 +838,7 @@ def process_mermaid_blocks(
                 img_item = epub.EpubItem(
                     uid=img_name.replace(".", "_"),
                     file_name=f"images/{img_name}",
-                    media_type="image/png",
+                    media_type="image/svg+xml",
                     content=img_data,
                 )
                 book.add_item(img_item)
@@ -806,7 +909,7 @@ def md_to_html(
     """Convert markdown to HTML with proper styling.
 
     Handles:
-    - Mermaid diagrams (rendered as PNG images)
+    - Mermaid diagrams (rendered by Pele as SVG images)
     - SVG images (embedded as EPUB image resources)
     - Internal links (converted to EPUB chapter references)
     - Standard markdown features
@@ -843,6 +946,10 @@ def md_to_html(
             continue
         # Skip external URLs (badges, shields, etc.)
         if src.startswith(("http://", "https://")):
+            continue
+        # Rendered diagrams are already EPUB items, not files on disk; sending
+        # them to handle_svg_image would swap them for a "not found" note.
+        if Path(src).name in state.mermaid_added_to_book:
             continue
         alt = img.get("alt", "Image")
         converted = handle_svg_image(
@@ -894,7 +1001,7 @@ def build_epub_async(
     logger: logging.Logger,
     state: BuildState | None = None,
 ) -> Path:
-    """Build EPUB with local Mermaid diagram rendering."""
+    """Build the EPUB, rendering every Mermaid diagram to SVG with Pele."""
     state = state or BuildState()
     state.reset()  # Ensure clean state
 
@@ -922,7 +1029,7 @@ def build_epub_async(
     collector = ChapterCollector(config.root_path, state)
     chapter_infos = collector.collect_all_chapters(get_chapter_order())
 
-    # Extract and render all Mermaid diagrams locally
+    # Extract all Mermaid diagrams and render them in one Pele batch
     logger.info("Extracting Mermaid diagrams...")
     md_files = [(ch.file_path, ch.file_title) for ch in chapter_infos]
     all_diagrams = extract_all_mermaid_blocks(md_files, logger)
@@ -1052,12 +1159,6 @@ def main() -> int:
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
     )
     parser.add_argument(
-        "--mmdc-path",
-        type=str,
-        default="mmdc",
-        help="Path to mmdc binary (default: mmdc from PATH)",
-    )
-    parser.add_argument(
         "--lang",
         type=str,
         default="en",
@@ -1066,12 +1167,6 @@ def main() -> int:
             "Language code: 'en' for English, 'vi' for Vietnamese, "
             "'zh' for Chinese, 'ja' for Japanese (default: en)"
         ),
-    )
-    parser.add_argument(
-        "--puppeteer-config",
-        type=str,
-        default=None,
-        help="Path to Puppeteer config JSON file passed to mmdc via -p (e.g. for --no-sandbox in CI)",
     )
 
     args = parser.parse_args()
@@ -1101,8 +1196,6 @@ def main() -> int:
         output_path=output,
         language=language,
         title=title,
-        mmdc_path=args.mmdc_path,
-        puppeteer_config=args.puppeteer_config,
     )
 
     try:

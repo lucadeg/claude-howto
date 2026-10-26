@@ -1,5 +1,4 @@
 ---
-name: Rollback
 description: Відкат до попереднього розгортання
 ---
 
@@ -12,3 +11,11 @@ description: Відкат до попереднього розгортання
 3. Виконання процедури відкату
 4. Запуск перевірок стану
 5. Повідомлення команди
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

@@ -17,7 +17,7 @@ $ARGUMENTS
 
 ## 核心原则
 
-**LLM 是无状态的**：CLAUDE.md 是每次对话中唯一会自动包含的文件。它是让 AI agent 了解代码库的主要入门文档。
+**LLM 是无状态的**：CLAUDE.md 是每次对话都会加载的主要项目文件（与自动记忆和未限定作用域的 rules 一起加载）。它是让 AI agent 了解代码库的主要入门文档。
 
 ### 黄金法则
 
@@ -93,7 +93,7 @@ agent_docs/
 
 创建或更新 CLAUDE.md 时：
 
-1. **目标长度**：少于 300 行，理想情况下少于 100 行
+1. **目标长度**：少于 200 行
 2. **不要写风格规则**：移除任何 lint/format 相关说明
 3. **不要写任务特定说明**：移到单独文件中
 4. **不要写代码片段**：改用文件引用
@@ -150,7 +150,7 @@ agent_docs/
 
 在最终确定前，检查：
 
-- [ ] 少于 300 行（最好少于 100 行）
+- [ ] 少于 200 行
 - [ ] 每一行都适用于所有会话
 - [ ] 没有风格/格式规则
 - [ ] 没有代码片段（使用文件引用）
@@ -193,10 +193,14 @@ agent_docs/
 
 如果用户请求创建或更新 AGENTS.md：
 
-AGENTS.md 用于定义专门的 agent 行为。与 CLAUDE.md（项目上下文）不同，AGENTS.md 定义的是：
-- 自定义 agent 角色和能力
-- agent 级约束与说明
-- 多 agent 场景下的工作流定义
+**从 v2.1.277 起，Claude Code 会直接把 `AGENTS.md` 作为项目指令读取。** 但前提是工作目录以及它上面的每一级目录都没有 `CLAUDE.md`、`.claude/CLAUDE.md` 或 `CLAUDE.local.md`。`~/.claude/CLAUDE.md`、受管理的 CLAUDE.md 和 `.claude/rules/` 不计入这项检查，它们仍会一并加载。该行为由 `/config` 中的 **Project instructions** 控制：`claude-md-or-agents-md`（默认）、`claude-md-and-agents-md`、`claude-md`、`managed-only`。在无法直接读取的环境中 — v2.1.277 之前的版本（在 Bedrock/Vertex/Foundry、LLM 网关或关闭遥测的情况下为 v2.1.281 之前），或升级后的第一个会话 — 退回到在 CLAUDE.md 中用 `@AGENTS.md` 导入，或者把 `CLAUDE.md` 软链接到它。
+
+AGENTS.md 是一个跨工具的项目上下文文件 — 和 CLAUDE.md 属于同一*类*文档，而不是 agent 定义格式。它的存在是为了让多个编码 agent 共用同一套项目约定：
+- 构建、测试和 lint 命令
+- 代码风格与架构约定
+- 仓库结构以及各部分所在位置
+
+Subagents 是单独定义的，放在 `.claude/agents/*.md` 里 — 不在 AGENTS.md 中。
 
 同样适用以下原则：
 - 保持聚焦和简洁
@@ -210,3 +214,10 @@ AGENTS.md 用于定义专门的 agent 行为。与 CLAUDE.md（项目上下文�
 - 系统提醒会告诉 Claude，CLAUDE.md “可能相关，也可能不相关” - 噪音越多，越容易被忽略
 - monorepo 最需要清晰的 WHAT/WHY/HOW 结构
 - 目录级 CLAUDE.md 应该更聚焦
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/memory

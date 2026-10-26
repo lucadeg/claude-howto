@@ -1,5 +1,4 @@
 ---
-name: Sync Documentation
 description: Синхронізація документації зі змінами коду
 ---
 
@@ -12,3 +11,11 @@ description: Синхронізація документації зі зміна
 3. Оновлення уражених документів
 4. Перевірка працездатності прикладів
 5. Оновлення номерів версій
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Посібник з пам'яті
@@ -105,7 +105,7 @@ Remember that we always use TypeScript strict mode in this project.
 Please add to memory: prefer async/await over promise chains.
 ```
 
-Claude оновить відповідний файл CLAUDE.md на основі вашого запиту.
+Якщо попросити Claude щось запам'ятати, це збережеться в auto memory. Щоб змінити CLAUDE.md, скажіть «додай це до CLAUDE.md» або відредагуйте файл самостійно через `/memory`.
 
 **Історична довідка** (більше не працює):
 
@@ -226,6 +226,7 @@ Claude Code використовує багаторівневу ієрархіч
 
 3. **Project Memory** — спільний контекст команди (версіонований)
    - `./.claude/CLAUDE.md` або `./CLAUDE.md` (у корені репозиторію)
+   - Починаючи з v2.1.277, на цьому ж рівні натомість завантажується `./AGENTS.md`, якщо ні в робочому каталозі, ні вище немає `CLAUDE.md` чи `CLAUDE.local.md` — керується через **Project instructions** у `/config`
 
 4. **Project Rules** — модульні, тематичні інструкції проєкту
    - `./.claude/rules/*.md`
@@ -281,13 +282,13 @@ graph TD
 // В ~/.claude/settings.json або .claude/settings.json
 {
   "claudeMdExcludes": [
-    "packages/legacy-app/CLAUDE.md",
-    "vendors/**/CLAUDE.md"
+    "**/packages/legacy-app/CLAUDE.md",
+    "**/vendors/**/CLAUDE.md"
   ]
 }
 ```
 
-Патерни зіставляються зі шляхами відносно кореня проєкту. Це особливо корисно для:
+Патерни зіставляються з абсолютними шляхами файлів за синтаксисом glob, тому починайте патерни для репозиторію з `**/`. Це особливо корисно для:
 
 - Монорепозиторіїв з багатьма підпроєктами, де релевантні лише деякі
 - Репозиторіїв із вендорними або сторонніми файлами CLAUDE.md
@@ -301,9 +302,9 @@ graph TD
 |--------|-------------|-------------|
 | 1 (Найвищий) | Managed policy (системний рівень) | Загальноорганізаційне застосування |
 | 2 | `managed-settings.d/` (v2.1.83+) | Модульні drop-in політики, об'єднані за алфавітом |
-| 3 | `~/.claude/settings.json` | Налаштування користувача |
+| 3 | `.claude/settings.local.json` | Локальні перевизначення (ігнорується git) |
 | 4 | `.claude/settings.json` | Рівень проєкту (комітиться в git) |
-| 5 (Найнижчий) | `.claude/settings.local.json` | Локальні перевизначення (ігнорується git) |
+| 5 (Найнижчий) | `~/.claude/settings.json` | Налаштування користувача |
 
 **Платформо-специфічна конфігурація (v2.1.51+):**
 
@@ -395,10 +396,10 @@ sequenceDiagram
     participant Editor as File System
     participant Memory as CLAUDE.md
 
-    User->>Claude: "Remember: use async/await"
+    User->>Claude: "Add async/await rule to CLAUDE.md"
     Claude->>User: "Which memory file?"
     User->>Claude: "Project memory"
-    Claude->>Editor: Open ~/.claude/settings.json
+    Claude->>Editor: Open ./CLAUDE.md
     Claude->>Memory: Write to ./CLAUDE.md
     Memory-->>Claude: File saved
     Claude->>Claude: Load updated memory
@@ -407,15 +408,15 @@ sequenceDiagram
 
 ## Auto Memory
 
-Auto memory — це постійний каталог, куди Claude автоматично записує висновки, патерни та інсайти під час роботи з вашим проєктом. На відміну від файлів CLAUDE.md, які ви пишете та підтримуєте вручну, auto memory записується самим Claude під час сесій.
+Auto memory — це постійний каталог, куди Claude автоматично зберігає типізовані нотатки (`user`, `feedback`, `project`, `reference`) під час роботи з вашим проєктом. Claude пропускає все, що можна вивести з кодової бази, як-от архітектуру, шляхи до файлів або виправлення під час налагодження. На відміну від файлів CLAUDE.md, які ви пишете та підтримуєте вручну, auto memory записується самим Claude під час сесій.
 
 ### Як працює Auto Memory
 
 - **Розташування**: `~/.claude/projects/<project>/memory/`
 - **Точка входу**: `MEMORY.md` — головний файл у каталозі auto memory
-- **Тематичні файли**: додаткові файли для конкретних тем (наприклад, `debugging.md`, `api-conventions.md`)
+- **Тематичні файли**: необов'язкові додаткові файли, по одному на кожен запис пам'яті (наприклад, `prefers-pnpm.md`, `release-checklist.md`)
 - **Поведінка завантаження**: перші 200 рядків `MEMORY.md` (або перші 25 КБ — що менше) завантажуються в контекст на початку сесії. Тематичні файли завантажуються за потребою, не при запуску.
-- **Читання/запис**: Claude читає та записує файли пам'яті під час сесій, виявляючи патерни та знання, специфічні для проєкту
+- **Читання/запис**: Claude читає та записує файли пам'яті під час сесій, дізнаючись ваші вподобання, відгуки та контекст проєкту
 
 ### Архітектура Auto Memory
 
@@ -423,11 +424,11 @@ Auto memory — це постійний каталог, куди Claude авто
 graph TD
     A["Claude Session Starts"] --> B["Load MEMORY.md<br/>(first 200 lines / 25KB)"]
     B --> C["Session Active"]
-    C --> D["Claude discovers<br/>patterns & insights"]
+    C --> D["Claude learns<br/>preferences & feedback"]
     D --> E{"Write to<br/>auto memory"}
     E -->|General notes| F["MEMORY.md"]
-    E -->|Topic-specific| G["debugging.md"]
-    E -->|Topic-specific| H["api-conventions.md"]
+    E -->|Topic-specific| G["prefers-pnpm.md"]
+    E -->|Topic-specific| H["release-checklist.md"]
     C --> I["On-demand load<br/>topic files"]
     I --> C
 
@@ -447,9 +448,9 @@ graph TD
 ```
 ~/.claude/projects/<project>/memory/
 ├── MEMORY.md              # Точка входу (перші 200 рядків / 25 КБ завантажуються при запуску)
-├── debugging.md           # Тематичний файл (завантажується за потребою)
-├── api-conventions.md     # Тематичний файл (завантажується за потребою)
-└── testing-patterns.md    # Тематичний файл (завантажується за потребою)
+├── prefers-pnpm.md        # Тематичний файл (завантажується за потребою)
+├── release-checklist.md   # Тематичний файл (завантажується за потребою)
+└── team-contacts.md       # Тематичний файл (завантажується за потребою)
 ```
 
 ### Вимога до версії
@@ -465,13 +466,13 @@ npm install -g @anthropic-ai/claude-code@latest
 За замовчуванням auto memory зберігається в `~/.claude/projects/<project>/memory/`. Ви можете змінити це розташування за допомогою налаштування `autoMemoryDirectory` (доступне з **v2.1.74**):
 
 ```jsonc
-// В ~/.claude/settings.json або .claude/settings.local.json (тільки налаштування користувача/локальні)
+// У будь-якому файлі налаштувань: користувача, проєкту, локальному або managed policy
 {
   "autoMemoryDirectory": "/path/to/custom/memory/directory"
 }
 ```
 
-> **Примітка**: `autoMemoryDirectory` можна встановити лише в налаштуваннях рівня користувача (`~/.claude/settings.json`) або локальних налаштуваннях (`.claude/settings.local.json`), а не в налаштуваннях проєкту чи managed policy.
+> **Примітка**: `autoMemoryDirectory` зчитується з будь-якої області налаштувань: користувача, проєкту, локальної, managed policy або `--settings`. Значення має бути абсолютним шляхом або починатися з `~/`.
 
 Це корисно, коли ви хочете:
 
@@ -485,15 +486,15 @@ npm install -g @anthropic-ai/claude-code@latest
 
 ### Пам'ять субагентів
 
-Субагенти (створені через інструменти на кшталт Task або паралельного виконання) можуть мати власний контекст пам'яті. Використовуйте поле `memory` у фронтматері визначення субагента, щоб вказати, які рівні пам'яті завантажувати:
+Субагенти (створені через інструмент Agent) можуть мати власну постійну пам'ять. Поле `memory` у фронтматері визначення субагента задає, де розташований каталог цієї пам'яті:
 
 ```yaml
-memory: user      # Завантажити лише пам'ять рівня користувача
-memory: project   # Завантажити лише пам'ять рівня проєкту
-memory: local     # Завантажити лише локальну пам'ять
+memory: user      # ~/.claude/agent-memory/<agent-name>/
+memory: project   # .claude/agent-memory/<agent-name>/ (можна ділитися через git)
+memory: local     # .claude/agent-memory-local/<agent-name>/ (не комітиться)
 ```
 
-Це дозволяє субагентам працювати з фокусованим контекстом, а не успадковувати повну ієрархію пам'яті.
+Під час запуску субагент читає перші 200 рядків / 25KB файлу `MEMORY.md` у цьому каталозі й отримує Read/Write/Edit, щоб його підтримувати. Поле не діє, якщо автоматичну пам'ять вимкнено.
 
 > **Примітка**: Субагенти також можуть підтримувати власну auto memory. Див. [офіційну документацію пам'яті субагентів](https://code.claude.com/docs/en/sub-agents#enable-persistent-memory) для деталей.
 
@@ -637,7 +638,9 @@ Claude завантажить CLAUDE.md із зазначеного додатк
 ````markdown
 # API Module Standards
 
-This file overrides root CLAUDE.md for everything in /src/api/
+This file supplements root CLAUDE.md for everything in /src/api/. Memory files are
+concatenated, not overridden — the root CLAUDE.md still applies, and Claude Code
+loads this file on demand when it reads, writes, or edits files in this subtree.
 
 ## API-Specific Standards
 
@@ -774,12 +777,12 @@ Claude не зберіг правило, бо у мене ніде не було
 
 ### Приклад 4: Оновлення пам'яті під час сесії
 
-Ви можете додавати нові правила до пам'яті під час активної сесії Claude Code. Є два способи це зробити:
+Ви можете додавати нові правила до CLAUDE.md під час активної сесії Claude Code (прохання *запам'ятати* щось зберігає це в auto memory, а не в CLAUDE.md). Є два способи це зробити:
 
 #### Метод 1: Прямий запит
 
 ```markdown
-User: Remember that I prefer using React hooks instead of class components
+User: Add this to CLAUDE.md: I prefer using React hooks instead of class components
      for all new components.
 
 Claude: I'm adding that to your memory. Which memory file should this go in?
@@ -905,7 +908,7 @@ graph LR
   - **Directory memory**: правила та перевизначення для конкретних модулів
 
 - **Використовуйте імпорти**: синтаксис `@шлях/до/файлу` для посилання на наявну документацію
-  - Підтримує до 5 рівнів рекурсивного вкладення
+  - Підтримує максимум 4 хопи рекурсивного вкладення
   - Уникає дублювання між файлами пам'яті
   - Приклад: `See @README.md for project overview`
 
@@ -933,7 +936,7 @@ graph LR
 
 - **Не забувайте оновлювати**: застаріла пам'ять може спричинити плутанину та використання застарілих практик
 
-- **Не перевищуйте ліміти вкладення**: імпорти пам'яті підтримують до 5 рівнів вкладення
+- **Не перевищуйте ліміти вкладення**: імпорти пам'яті підтримують максимум 4 хопи рекурсивного вкладення
 
 ### Поради з управління пам'яттю
 
@@ -1079,7 +1082,9 @@ Claude запропонує обрати, який файл пам'яті оно
    cat > /path/to/directory/CLAUDE.md << 'EOF'
    # [Directory Name] Standards
 
-   This file overrides root CLAUDE.md for this directory.
+   This file supplements root CLAUDE.md for this directory. Memory files are
+   concatenated, not overridden — Claude Code loads this file on demand when it
+   reads, writes, or edits files in this directory.
 
    ## [Specific Standards]
    EOF
@@ -1154,6 +1159,14 @@ Claude запропонує обрати, який файл пам'яті оно
 - [Офіційна документація пам'яті](https://code.claude.com/docs/en/memory) — документація Anthropic
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/memory
+- https://code.claude.com/docs/en/memory#agents-md
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.288
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.293
+- https://code.claude.com/docs/en/sub-agents#enable-persistent-memory
+- https://code.claude.com/docs/en/settings-reference
+- https://code.claude.com/docs/en/claude-directory
 **Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

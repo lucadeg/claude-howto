@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Danh Sách Tài Nguyên Hữu Ích
@@ -144,11 +144,11 @@ graph TD
     S --> T[Test Automation]
     T --> U[Repository Ready]
 
-    style A fill:#e1f5ff
-    style G fill:#fff4e1
-    style K fill:#f0ffe1
-    style Q fill:#ffe1f5
-    style U fill:#90EE90
+    style A fill:#e1f5fe,stroke:#333,color:#333
+    style G fill:#fff9c4,stroke:#333,color:#333
+    style K fill:#e8f5e9,stroke:#333,color:#333
+    style Q fill:#f3e5f5,stroke:#333,color:#333
+    style U fill:#e8f5e9,stroke:#333,color:#333
 ```
 
 #### Cho Repository Hiện Có / For an Existing Repository
@@ -209,12 +209,12 @@ graph TD
     Y -->|Yes| H
     Y -->|No| Z[Workflow Complete]
 
-    style A fill:#e1f5ff
-    style C fill:#ffecec
-    style D fill:#fff4e1
-    style P fill:#f0ffe1
-    style T fill:#ffe1f5
-    style Z fill:#90EE90
+    style A fill:#e1f5fe,stroke:#333,color:#333
+    style C fill:#fce4ec,stroke:#333,color:#333
+    style D fill:#fff9c4,stroke:#333,color:#333
+    style P fill:#e8f5e9,stroke:#333,color:#333
+    style T fill:#f3e5f5,stroke:#333,color:#333
+    style Z fill:#e8f5e9,stroke:#333,color:#333
 ```
 
 **Tips**:
@@ -234,17 +234,22 @@ Các bước này capture các core recommendations cho smooth workflows với C
 | Tính Năng | Mô Tả | Tìm Hiểu Thêm |
 |---------|-------------|------------|
 | **Auto Memory** | Claude tự động học và nhớ preferences của bạn qua các phiên | [Memory Guide](02-memory/) |
-| **Remote Control** | Điều khiển Claude Code sessions từ các external tools và scripts | [Advanced Features](09-advanced-features/) |
+| **Remote Control** | Tiếp tục một session Claude Code cục bộ từ điện thoại, trình duyệt hoặc ứng dụng Claude | [Advanced Features](09-advanced-features/) |
 | **Web Sessions** | Truy cập Claude Code qua browser-based interfaces cho remote development | [CLI Reference](10-cli/) |
 | **Desktop App** | Native desktop application cho Claude Code với enhanced UI | [Claude Code Docs](https://code.claude.com/docs/en/desktop) |
-| **Extended Thinking** | Deep reasoning toggle qua `Alt+T`/`Option+T` hoặc `MAX_THINKING_TOKENS` env var | [Advanced Features](09-advanced-features/) |
+| **Extended Thinking** | Deep reasoning toggle qua `Alt+T`/`Option+T`; Opus 4.7+, Sonnet 5+, Haiku 5.5 và Fable luôn dùng adaptive reasoning, nên ngân sách cố định `MAX_THINKING_TOKENS` không áp dụng (điều chỉnh độ sâu bằng `/effort`) | [Advanced Features](09-advanced-features/) |
 | **Permission Modes** | Fine-grained control: default, acceptEdits, plan, auto, dontAsk, bypassPermissions | [Advanced Features](09-advanced-features/) |
 | **7-Tier Memory** | Managed Policy, Project, Project Rules, User, User Rules, Local, Auto Memory | [Memory Guide](02-memory/) |
-| **Hook Events** | 25 events: PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, Notification, Elicitation, và nhiều hơn | [Hooks Guide](06-hooks/) |
+| **Hook Events** | 33 events: PreToolUse, PostToolUse, PostToolUseFailure, Stop, StopFailure, SubagentStart, SubagentStop, Notification, Elicitation, và nhiều hơn | [Hooks Guide](06-hooks/) |
 | **Agent Teams** | Phối hợp nhiều agents làm việc cùng nhau trên các complex tasks | [Subagents Guide](04-subagents/) |
 | **Scheduled Tasks** | Thiết lập recurring tasks với `/loop` và cron tools | [Advanced Features](09-advanced-features/) |
-| **Chrome Integration** | Browser automation với headless Chromium | [Advanced Features](09-advanced-features/) |
+| **Chrome Integration** | Browser automation trong Chrome của bạn qua tiện ích Claude in Chrome | [Advanced Features](09-advanced-features/) |
 | **Keyboard Customization** | Tùy chỉnh keybindings bao gồm chord sequences | [Advanced Features](09-advanced-features/) |
 
 ---
-**Cập Nhật Lần Cuối**: Tháng 4 năm 2026
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/model-config

@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Плагін DevOps Automation
@@ -18,7 +18,7 @@
 ## Встановлення
 
 ```bash
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ## Що включено
@@ -75,7 +75,7 @@
 
 ## Вимоги
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - Kubernetes CLI (kubectl)
 - Налаштований доступ до кластера
 
@@ -105,3 +105,11 @@ Claude:
 🚀 Поди: 3/3 готові
 ⏱️  Час: 2хв 34с
 ```
+
+---
+
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

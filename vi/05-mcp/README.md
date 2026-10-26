@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # MCP (Model Context Protocol)
@@ -105,13 +105,27 @@ Giao thức Server-Sent Events đã lỗi thời để ủng hộ `http` nhưng 
 claude mcp add --transport sse legacy-server https://example.com/sse
 ```
 
-### Giao Thức WebSocket / WebSocket Transport
+### Giao Thức WebSocket (`ws`) / WebSocket Transport (`ws`)
 
-Giao thức WebSocket cho các kết nối hai chiều liên tục:
+Máy chủ WebSocket giữ một kết nối hai chiều liên tục, phù hợp với các máy chủ MCP từ xa cần đẩy sự kiện tới Claude mà không cần được hỏi. Hãy dùng HTTP thay thế nếu máy chủ của bạn chỉ phản hồi các yêu cầu, vì HTTP hỗ trợ OAuth và cờ `claude mcp add --transport`, còn WebSocket thì không hỗ trợ cả hai.
 
-```bash
-claude mcp add --transport ws realtime-server wss://example.com/mcp
+Vì `--transport` không chấp nhận `ws`, hãy cấu hình trong `.mcp.json` hoặc qua `claude mcp add-json`:
+
+```json
+{
+  "type": "ws",
+  "url": "wss://mcp.example.com/socket",
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN"
+  }
+}
 ```
+
+Mục `type: "ws"` chấp nhận cùng các trường `url`, `headers`, `headersHelper`, `timeout` và `alwaysLoad` như `http`. Xác thực **chỉ qua header** — không có luồng OAuth cho máy chủ WebSocket.
+
+> **Lưu ý**: Từ v2.1.285, `claude mcp list` liệt kê các máy chủ WebSocket (`ws`) cùng URL và trạng thái sức khỏe của chúng (các phiên bản trước bỏ sót chúng). Bạn cũng có thể kiểm tra chúng bằng `claude mcp get <tên>` hoặc bảng `/mcp`.
+
+Giống HTTP và SSE, kết nối WebSocket dùng cửa sổ nhàn rỗi 5 phút; stdio và WebSocket không có bộ đếm thời gian cho từng yêu cầu. Một mục `url` không có `type` sẽ báo lỗi và liệt kê `"http"`, `"sse"`, `"ws"` là các giá trị hợp lệ.
 
 ### Lưu Ý Cụ Thể Cho Windows / Windows-Specific Note
 
@@ -202,16 +216,17 @@ sequenceDiagram
 
 ## Tìm Kiếm Công Cụ MCP / MCP Tool Search
 
-Khi mô tả công cụ MCP vượt quá 10% cửa sổ ngữ cảnh, Claude Code tự động kích hoạt tìm kiếm công cụ để chọn công cụ phù hợp một cách hiệu quả mà không làm bội ngữ cảnh mô hình.
+Tìm kiếm công cụ được bật theo mặc định: các công cụ MCP được hoãn lại và khám phá khi cần, nên định nghĩa của chúng không lấp đầy ngữ cảnh mô hình. Claude Code tắt tính năng này khi `ANTHROPIC_BASE_URL` trỏ tới một host không phải của bên thứ nhất, vì hầu hết các proxy không chuyển tiếp các khối mà nó cần.
 
 | Cài Đặt | Giá Trị | Mô Tả |
 |---------|-------|-------------|
-| `ENABLE_TOOL_SEARCH` | `auto` (mặc định) | Tự động kích hoạt khi mô tả công cụ vượt quá 10% ngữ cảnh |
-| `ENABLE_TOOL_SEARCH` | `auto:<N>` | Tự động kích hoạt tại ngưỡng tùy chỉnh của `N` công cụ |
-| `ENABLE_TOOL_SEARCH` | `true` | Luôn được kích hoạt bất kể số lượng công cụ |
+| `ENABLE_TOOL_SEARCH` | (không đặt — mặc định) | Tất cả công cụ MCP được hoãn lại và tải khi cần |
+| `ENABLE_TOOL_SEARCH` | `auto` | Chế độ ngưỡng: công cụ được tải trước cho đến khi định nghĩa của chúng đạt 10% cửa sổ ngữ cảnh, sau đó tất cả được hoãn lại |
+| `ENABLE_TOOL_SEARCH` | `auto:<N>` | Chế độ ngưỡng với tỷ lệ phần trăm tùy chỉnh (0-100) — ví dụ, `auto:5` cho 5% |
+| `ENABLE_TOOL_SEARCH` | `true` | Tất cả công cụ MCP được hoãn lại |
 | `ENABLE_TOOL_SEARCH` | `false` | Đã tắt; tất cả mô tả công cụ được gửi đầy đủ |
 
-> **Lưu Ý:** Tìm kiếm công cụ yêu cầu Sonnet 4 hoặc mới hơn, hoặc Opus 4 hoặc mới hơn. Các mô hình Haiku không được hỗ trợ cho tìm kiếm công cụ.
+> **Lưu Ý:** Tìm kiếm công cụ yêu cầu một mô hình hỗ trợ các khối `tool_reference`: Claude Opus 4, Claude Sonnet 4, Claude Haiku 4.5, và các mô hình mới hơn (Opus 4.5, Sonnet 4.5, Haiku 4.5 trở lên trên Agent Platform của Google Cloud).
 
 ## Cập Nhật Công Cụ Động / Dynamic Tool Updates
 
@@ -223,7 +238,7 @@ Các MCP server có thể yêu cầu đầu vào có cấu trúc từ người d
 
 ## Giới Hạn Mô Tả Và Hướng Dẫn Công Cụ / Tool Description and Instruction Cap
 
-Kể từ v2.1.84, Claude Code thực thi **giới hạn 2 KB** trên mô tả và hướng dẫn công cụ cho mỗi MCP server. Điều này ngăn các server riêng lẻ tiêu thụ quá nhiều ngữ cảnh với các định nghĩa công cụ quá dài dòng, giảm bloat ngữ cảnh và giữ các tương tác hiệu quả.
+Claude Code cắt bớt mỗi mô tả công cụ MCP và hướng dẫn của mỗi server để các server dài dòng không làm phình ngữ cảnh. Giới hạn mặc định là **4.096 ký tự** cho hướng dẫn của server và cho mô tả của các công cụ được tải ngay từ đầu (v2.1.296; 2.048 từ v2.1.84 đến trước đó), và **16.384 ký tự** cho các mô tả mà Claude tải qua tool search (v2.1.295). Kể từ v2.1.280, `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` ghi đè các giới hạn này: con số bạn đặt thay thế **cả hai** giới hạn (`8192` nâng giới hạn ngắn hơn và hạ giới hạn dài hơn). Kể từ v2.1.299, mô tả và hướng dẫn từ các MCP server first-party của Anthropic tại `api.anthropic.com` đến Claude đầy đủ. Hãy đặt các chi tiết quan trọng ở gần đầu mô tả.
 
 ## MCP Prompts Như Lệnh Slash / MCP Prompts as Slash Commands
 
@@ -259,11 +274,22 @@ Ví dụ, để tham khảo một tài nguyên database cụ thể:
 
 Cấu hình MCP có thể được lưu trữ tại các phạm vi khác nhau với các mức độ chia sẻ khác nhau:
 
-| Phạm Vi | Vị Trí | Mô Tả | Chia Sẻ Với | Yêu Cầu Chấp Thuận |
-|-------|----------|-------------|-------------|------------------|
-| **Local** (mặc định) | `~/.claude.json` (dưới đường dẫn project) | Riêng tư cho người dùng hiện tại, project hiện tại chỉ (được gọi là `project` trong các phiên bản cũ hơn) | Chỉ bạn | Không |
-| **Project** | `.mcp.json` | Được check vào git repository | Các thành viên nhóm | Có (lần sử dụng đầu) |
-| **User** | `~/.claude.json` | Có sẵn trên tất cả các projects (được gọi là `global` trong các phiên bản cũ hơn) | Chỉ bạn | Không |
+| Phạm Vi | Cờ | Vị Trí | Mô Tả | Chia Sẻ Với | Yêu Cầu Chấp Thuận |
+|-------|------|----------|-------------|-------------|------------------|
+| **Local** (mặc định) | `--scope local` | `~/.claude.json` (dưới đường dẫn project) | Riêng tư cho người dùng hiện tại, project hiện tại chỉ (được gọi là `project` trong các phiên bản cũ hơn) | Chỉ bạn | Không |
+| **Project** | `--scope project` | `.mcp.json` | Được check vào git repository | Các thành viên nhóm | Có (lần sử dụng đầu) |
+| **User** | `--scope user` | `~/.claude.json` | Có sẵn trên tất cả các projects (được gọi là `global` trong các phiên bản cũ hơn) | Chỉ bạn | Không |
+
+Chọn phạm vi khi thêm server bằng `--scope` (dạng ngắn `-s`). Nếu bỏ qua, Claude
+Code sử dụng `local`:
+
+```bash
+# Phạm vi project — ghi vào .mcp.json để cả nhóm dùng chung
+claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
+
+# Phạm vi user — có sẵn trong mọi project
+claude mcp add --scope user --transport stdio memory -- npx @modelcontextprotocol/server-memory
+```
 
 ### Sử Dụng Phạm Vi Project / Using Project Scope
 
@@ -274,7 +300,10 @@ Lưu trữ cấu hình MCP cụ thể project trong `.mcp.json`:
   "mcpServers": {
     "github": {
       "type": "http",
-      "url": "https://api.github.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
     }
   }
 }
@@ -288,7 +317,7 @@ Các thành viên nhóm sẽ thấy prompt chấp thuận khi sử dụng projec
 
 ```bash
 # Thêm server dựa trên HTTP
-claude mcp add --transport http github https://api.github.com/mcp
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 
 # Thêm server stdio cục bộ
 claude mcp add --transport stdio database -- npx @company/db-server
@@ -332,10 +361,10 @@ claude mcp add-from-claude-desktop
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -384,9 +413,9 @@ Reviewers: @bob, @charlie
 
 **Thiết Lập:**
 ```bash
-export GITHUB_TOKEN="your_github_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_token"
 # Hoặc sử dụng CLI để thêm trực tiếp:
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
 ### Mở Rộng Biến Môi Trường Trong Cấu Hình / Environment Variable Expansion in Configuration
@@ -416,7 +445,7 @@ Cấu hình MCP hỗ trợ mở rộng biến môi trường với các mặc đ
 ```
 
 Các biến được mở rộng tại runtime:
-- `${VAR}` - Sử dụng biến môi trường, lỗi nếu không được đặt
+- `${VAR}` - Sử dụng biến môi trường; nếu biến chưa được đặt (và không có mặc định), server vẫn được tải với chuỗi `${VAR}` nguyên văn, và `claude mcp list` cùng `/mcp` cảnh báo về biến bị thiếu
 - `${VAR:-default}` - Sử dụng biến môi trường, fallback thành mặc định nếu không được đặt
 
 ### Ví Dụ 2: Thiết Lập Database MCP / Example 2: Database MCP Setup
@@ -428,10 +457,7 @@ Các biến được mở rộng tại runtime:
   "mcpServers": {
     "database": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-database"],
-      "env": {
-        "DATABASE_URL": "postgresql://user:pass@localhost/mydb"
-      }
+      "args": ["-y", "@bytebase/dbhub", "--dsn", "${DATABASE_URL}"]
     }
   }
 }
@@ -461,9 +487,47 @@ ORDER BY order_count DESC;
 **Thiết Lập:**
 ```bash
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-# Hoặc sử dụng CLI để thêm trực tiếp:
-claude mcp add --transport stdio database -- npx @modelcontextprotocol/server-database
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --dsn "$DATABASE_URL"
 ```
+
+> **Warning**: Thiết lập này cho Claude quyền ghi. Công cụ `execute_sql` của DBHub chạy mọi câu SQL, kể cả `UPDATE`, `DELETE` và `DROP`, trừ khi bạn bật chế độ chỉ đọc. Hãy dùng database cục bộ hoặc database thử nghiệm, không dùng production.
+
+**Thiết lập chỉ đọc (khuyến nghị):**
+
+Tạo một user database chỉ được chạy `SELECT` (ví dụ PostgreSQL):
+
+```sql
+CREATE ROLE claude_readonly LOGIN PASSWORD 'change-me';
+GRANT CONNECT ON DATABASE mydb TO claude_readonly;
+GRANT USAGE ON SCHEMA public TO claude_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO claude_readonly;
+```
+
+Bật chế độ chỉ đọc trong file `dbhub.toml`. Cờ `--readonly` cũ không còn hoạt động. DBHub lấy `${DATABASE_URL}` từ biến môi trường, nên không cần ghi thông tin đăng nhập vào file:
+
+```toml
+[[sources]]
+id = "default"
+dsn = "${DATABASE_URL}"
+
+[[tools]]
+name = "execute_sql"
+source = "default"
+readonly = true
+```
+
+Sau đó trỏ DBHub tới file này thay vì truyền `--dsn`. Trước tiên hãy xóa server `database` có quyền ghi đã thêm ở trên, vì Claude Code không cho thêm hai server trùng tên:
+
+```bash
+# Thay thế server có quyền ghi đã thêm ở trên
+claude mcp remove database
+export DATABASE_URL="postgresql://claude_readonly:change-me@localhost/mydb"
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --config "$PWD/dbhub.toml"
+```
+
+Chế độ chỉ đọc lọc theo nội dung câu SQL và từng bị vượt qua (đã sửa trong DBHub 0.22.6), nên user chỉ có quyền `SELECT` mới là lớp bảo vệ dữ liệu thực sự. Xem [chế độ chỉ đọc của DBHub](https://dbhub.ai/tools/execute-sql#read-only-mode).
 
 ### Ví Dụ 3: Workflow Multi-MCP / Example 3: Multi-MCP Workflow
 
@@ -514,9 +578,10 @@ Final Output:
 
 **Thiết Lập:**
 ```bash
-export GITHUB_TOKEN="your_github_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_token"
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-export SLACK_TOKEN="your_slack_token"
+export SLACK_BOT_TOKEN="your_slack_bot_token"
+export SLACK_TEAM_ID="your_slack_team_id"
 # Thêm mỗi MCP server qua CLI hoặc cấu hình chúng trong .mcp.json
 ```
 
@@ -597,9 +662,10 @@ Lưu trữ credentials nhạy cảm trong các biến môi trường:
 
 ```bash
 # ~/.bashrc hoặc ~/.zshrc
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxxx"
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_xxxxxxxxxxxxx"
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-export SLACK_TOKEN="xoxb-xxxxxxxxxxxxx"
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 ```
 
 Sau đó tham khảo chúng trong cấu hình MCP:
@@ -607,7 +673,7 @@ Sau đó tham khảo chúng trong cấu hình MCP:
 ```json
 {
   "env": {
-    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
   }
 }
 ```
@@ -631,42 +697,61 @@ claude mcp add --transport stdio claude-agent -- claude mcp serve
 
 ## Cấu Hình MCP Được Quản Lý (Enterprise) / Managed MCP Configuration
 
-Đối với các triển khai enterprise, các quản trị viên IT có thể thực thi các chính sách MCP server qua file cấu hình `managed-mcp.json`. File này cung cấp kiểm soát độc quyền về việc MCP servers nào được phép hoặc chặn trên toàn tổ chức.
+Đối với các triển khai enterprise, các quản trị viên IT thực thi chính sách MCP server qua hai cơ chế tách biệt: file `managed-mcp.json` triển khai một tập servers cố định với kiểm soát độc quyền, và các settings key `allowedMcpServers` / `deniedMcpServers` lọc xem những servers đã cấu hình nào được phép nạp.
 
 **Vị Trí:**
 - macOS: `/Library/Application Support/ClaudeCode/managed-mcp.json`
-- Linux: `~/.config/ClaudeCode/managed-mcp.json`
-- Windows: `%APPDATA%\ClaudeCode\managed-mcp.json`
+- Linux và WSL: `/etc/claude-code/managed-mcp.json`
+- Windows: `C:\Program Files\ClaudeCode\managed-mcp.json`
 
-**Tính Năng:**
-- `allowedMcpServers` -- whitelist của các servers được phép
-- `deniedMcpServers` -- blocklist của các servers bị cấm
-- Hỗ trợ matching theo tên server, lệnh, và mẫu URL
-- Chính sách MCP toàn tổ chức được thực thi trước cấu hình người dùng
-- Ngăn các kết nối server trái phép
+`managed-mcp.json` dùng cùng định dạng với file `.mcp.json` của dự án — một map `mcpServers` ở cấp cao nhất. Nó triển khai servers; nó không lọc servers:
+
+```json
+{
+  "mcpServers": {
+    "example-remote": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp"
+    },
+    "company-internal": {
+      "type": "stdio",
+      "command": "/usr/local/bin/company-mcp-server",
+      "args": ["--config", "/etc/company/mcp-config.json"]
+    }
+  }
+}
+```
+
+Mọi người dùng trên máy đều đọc được file này, nên đừng bao giờ đặt thông tin xác thực trong khối `env`. Hãy dùng mở rộng biến `${VAR}`, OAuth, hoặc `headersHelper` thay thế.
+
+**Lọc: allowlist và denylist**
+
+`allowedMcpServers` và `deniedMcpServers` là **settings key, không phải trường của `managed-mcp.json`**. Hãy đặt chúng trong một nguồn settings được quản lý — server-managed settings, `managed-settings.json`, một MDM profile, hoặc registry — để chúng có hiệu lực thực thi:
+
+- `allowedMcpServers` -- allowlist của các servers được phép. Đặt `allowManagedMcpServersOnly: true` cùng chỗ, trong cùng nguồn được quản lý, nếu không các allowlist sẽ hợp nhất từ mọi scope và người dùng có thể nới rộng allowlist của bạn.
+- `deniedMcpServers` -- denylist của các servers bị chặn. Luôn hợp nhất từ mọi scope.
+
+Mỗi mục là một object với **duy nhất một** key:
+
+| Key | Khớp với |
+|-----|----------|
+| `serverUrl` | URL của server từ xa, khớp chính xác hoặc dùng ký tự đại diện `*` |
+| `serverCommand` | Chính xác lệnh và các tham số khởi động một stdio server, dưới dạng mảng — mọi tham số, đúng thứ tự |
+| `serverName` | Nhãn do người dùng đặt. **Chỉ khớp chính xác; ký tự đại diện không được mở rộng** |
 
 **Ví dụ cấu hình:**
 
 ```json
 {
   "allowedMcpServers": [
-    {
-      "serverName": "github",
-      "serverUrl": "https://api.github.com/mcp"
-    },
-    {
-      "serverName": "company-internal",
-      "serverCommand": "company-mcp-server"
-    }
+    { "serverUrl": "https://mcp.example.com/*" },
+    { "serverCommand": ["/usr/local/bin/company-mcp-server", "--config", "/etc/company/mcp-config.json"] }
   ],
   "deniedMcpServers": [
-    {
-      "serverName": "untrusted-*"
-    },
-    {
-      "serverUrl": "http://*"
-    }
-  ]
+    { "serverName": "untrusted-server" },
+    { "serverUrl": "http://*" }
+  ],
+  "allowManagedMcpServersOnly": true
 }
 ```
 
@@ -701,6 +786,8 @@ Các MCP server có thể được định nghĩa inline trong frontmatter agent
 
 ```yaml
 ---
+name: my-tool-agent
+description: Uses my-tool for specialized operations
 mcpServers:
   my-tool:
     type: http
@@ -719,7 +806,7 @@ Claude Code thực thi các giới hạn trên đầu ra công cụ MCP để ng
 | Giới Hạn | Ngưỡng | Hành Vi |
 |-------|-----------|----------|
 | **Cảnh Báo** | 10,000 tokens | Một cảnh báo được hiển thị rằng đầu ra lớn |
-| **Max mặc định** | 25,000 tokens | Đầu ra bị cắt ngắn vượt quá giới hạn này |
+| **Max mặc định** | 25,000 tokens | Đầu ra lớn hơn được lưu vào một file, và đường dẫn file được đưa vào cuộc hội thoại thay thế |
 | **Persist đĩa** | 50,000 ký tự | Kết quả công cụ vượt quá 50K ký tự được persist đến đĩa |
 
 Giới hạn đầu ra tối đa có thể cấu hình qua biến môi trường `MAX_MCP_OUTPUT_TOKENS`:
@@ -992,7 +1079,7 @@ MCPorter bổ sung cho cách tiếp cận thực thi code được mô tả ở 
 
 1. **Thêm MCP server đầu tiên của bạn** sử dụng CLI (ví dụ: GitHub):
 ```bash
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
    Hoặc tạo một file `.mcp.json` trong thư mục gốc project của bạn:
@@ -1000,10 +1087,10 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -1012,7 +1099,7 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 
 2. **Đặt các biến môi trường:**
 ```bash
-export GITHUB_TOKEN="your_github_personal_access_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_personal_access_token"
 ```
 
 3. **Test kết nối:**
@@ -1035,7 +1122,7 @@ npm install -g @modelcontextprotocol/server-github
 
 **Database MCP:**
 ```bash
-npm install -g @modelcontextprotocol/server-database
+npm install -g @bytebase/dbhub
 ```
 
 **Filesystem MCP:**
@@ -1043,7 +1130,7 @@ npm install -g @modelcontextprotocol/server-database
 npm install -g @modelcontextprotocol/server-filesystem
 ```
 
-**Slack MCP:**
+**Slack MCP (gói đã ngừng hỗ trợ):**
 ```bash
 npm install -g @modelcontextprotocol/server-slack
 ```
@@ -1062,10 +1149,10 @@ npm install -g @modelcontextprotocol/server-github
 ### Authentication Failed
 ```bash
 # Xác minh biến môi trường được đặt
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 
 # Re-export nếu cần
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 
 # Xác minh token có các quyền đúng
 # Check GitHub token scopes tại: https://github.com/settings/tokens
@@ -1113,6 +1200,15 @@ export GITHUB_TOKEN="your_token"
 
 ---
 
-**Cập Nhật Lần Cuối**: Tháng 4 năm 2026
-**Phiên Bản Claude Code**: 2.1+
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/managed-mcp
+- https://code.claude.com/docs/en/mcp#configure-tool-search
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.285
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.296
+- https://code.claude.com/docs/en/mcp#tool-search-for-mcp-server-authors
+- https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcp-json
+- https://code.claude.com/docs/en/sub-agents
 **Các Mô Hình Tương Thích**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

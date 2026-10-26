@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Đóng Góp Cho Claude How To / Contributing to Claude How To
@@ -68,7 +68,7 @@ git checkout -b docs/improvement-area
 
 ### 3. Thiết Lập Môi Trường Của Bạn
 
-Pre-commit hooks chạy cùng các kiểm tra như CI cục bộ trước mỗi commit. Tất cả bốn kiểm tra phải pass trước khi PR được chấp nhận.
+Pre-commit hooks chạy cùng các kiểm tra như CI cục bộ trước mỗi commit. Tất cả năm kiểm tra phải pass trước khi PR được chấp nhận.
 
 **Dependencies được yêu cầu:**
 
@@ -82,8 +82,9 @@ uv pip install -r scripts/requirements-dev.txt
 # Markdown linter (Node.js)
 npm install -g markdownlint-cli
 
-# Mermaid diagram validator (Node.js)
-npm install -g @mermaid-js/mermaid-cli
+# Sơ đồ Mermaid được render bằng Pele, cần Node.js >= 20 (không cần cài
+# package toàn cục). Kiểm tra phiên bản:
+node --version
 
 # Install pre-commit và activate hooks
 uv pip install pre-commit
@@ -95,6 +96,8 @@ pre-commit install
 ```bash
 pre-commit run --all-files
 ```
+
+Lần chạy đầu tiên sẽ tải Node.js 22 cho các hook Mermaid (do pre-commit cung cấp, nên chúng vẫn chạy được khi máy không có Node.js) và bundle Pele cố định vào `scripts/.vendor-cache/pele/`; các lần sau chạy offline. Các hook Mermaid chạy ở chế độ strict và báo lỗi nếu không chạy được Pele. Để commit offline trước lần tải đầu tiên, hãy bỏ qua chúng bằng `SKIP=mermaid,vietnamese-mermaid,japanese-mermaid`.
 
 Các hooks chạy trên mỗi commit là:
 - Kiểm tra markdown-lint

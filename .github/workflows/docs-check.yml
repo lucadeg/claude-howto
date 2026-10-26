@@ -1,9 +1,10 @@
-
 name: Documentation Checks
 
 on:
+  # Fork policy: manual execution through FounderOS/AdminGate.
   workflow_dispatch:
-  # Automatic triggers removed; invoke through FounderOS/Admin Gate.
+
+# Cancel in-progress runs for the same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -45,29 +46,36 @@ jobs:
           LINK_CHECK_STRICT: "1"
 
   mermaid:
-    name: Mermaid Syntax
+    name: Mermaid Syntax (Pele)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Pele needs Node.js >= 20; the pinned bundle is downloaded once and
+      # sha256-verified on every run (see scripts/vendor_assets.py).
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-
-      - name: Install mermaid CLI
-        run: npm install -g @mermaid-js/mermaid-cli
+          node-version: '22'
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
+      - name: Cache Pele bundle
+        uses: actions/cache@v4
+        with:
+          path: scripts/.vendor-cache/pele
+          key: pele-${{ hashFiles('scripts/vendor_assets.py') }}
+
+      # Strict: fails if Pele cannot run or no diagram is found, so a broken
+      # toolchain can never pass as a skipped check.
       - name: Validate Mermaid diagrams
-        run: python scripts/check_mermaid.py
+        run: python scripts/check_mermaid.py --strict
         env:
-          MERMAID_PUPPETEER_NO_SANDBOX: "true"
+          PELE_REQUIRED: "1"
 
   cross-references:
     name: Cross-reference Check

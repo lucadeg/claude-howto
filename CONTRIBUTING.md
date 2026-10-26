@@ -68,7 +68,7 @@ git checkout -b docs/improvement-area
 
 ### 3. Set Up Your Environment
 
-Pre-commit hooks run the same checks as CI locally before every commit. All four checks must pass before a PR will be accepted.
+Pre-commit hooks run the same checks as CI locally before every commit. All five checks must pass before a PR will be accepted.
 
 **Required dependencies:**
 
@@ -82,8 +82,9 @@ uv pip install -r scripts/requirements-dev.txt
 # Markdown linter (Node.js)
 npm install -g markdownlint-cli
 
-# Mermaid diagram validator (Node.js)
-npm install -g @mermaid-js/mermaid-cli
+# Mermaid diagrams render with Pele, which needs Node.js >= 20 (nothing to
+# install globally). Check your version:
+node --version
 
 # Install pre-commit and activate hooks
 uv pip install pre-commit
@@ -95,6 +96,8 @@ pre-commit install
 ```bash
 pre-commit run --all-files
 ```
+
+The first run downloads Node.js 22 for the Mermaid hooks (pre-commit provisions it, so they work even without a system Node.js) and the pinned Pele bundle into `scripts/.vendor-cache/pele/`; later runs work offline. The Mermaid hooks run in strict mode and fail if Pele cannot run. To commit offline before that first download, skip them with `SKIP=mermaid,vietnamese-mermaid,japanese-mermaid`.
 
 The hooks that run on every commit are:
 
@@ -378,4 +381,8 @@ By contributing to this project, you agree that your contributions will be licen
 Thank you for contributing! 🙏
 
 ---
-**Last Updated**: April 9, 2026
+**Last Updated**: August 4, 2026
+**Claude Code Version**: 2.1.220
+**Sources**:
+- https://code.claude.com/docs/en/overview
+**Compatible Models**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

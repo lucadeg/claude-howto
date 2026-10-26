@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-27 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Claude Code プラグイン
@@ -47,7 +47,7 @@ sequenceDiagram
     participant Hooks
     participant Tools as Configured Tools
 
-    User->>Claude: /plugin install pr-review
+    User->>Claude: claude --plugin-dir ./07-plugins/pr-review
     Claude->>Plugin: Download plugin manifest
     Plugin-->>Claude: Return plugin definition
     Claude->>Install: Extract components
@@ -104,14 +104,16 @@ my-plugin/
 │   ├── specialist-2.md
 │   └── configs/
 ├── skills/               # SKILL.md ファイルを伴うエージェントスキル
-│   ├── skill-1.md
-│   └── skill-2.md
+│   ├── skill-1/
+│   │   └── SKILL.md
+│   └── skill-2/
+│       └── SKILL.md
 ├── hooks/                # hooks.json のイベントハンドラ
 │   └── hooks.json
 ├── .mcp.json             # MCP サーバーの設定
 ├── .lsp.json             # コードインテリジェンス用の LSP サーバー設定
 ├── bin/                  # プラグイン有効化中に Bash ツールの PATH に追加される実行ファイル
-├── settings.json         # プラグイン有効化時に適用されるデフォルト設定（現状は `agent` キーのみサポート）
+├── settings.json         # プラグイン有効化時に適用されるデフォルト設定（有効なのは `agent` と `subagentStatusLine` キーのみ）
 ├── themes/               # 任意：Claude Code のカスタムテーマを同梱（v2.1.118 以降）
 ├── templates/
 │   └── issue-template.md
@@ -206,7 +208,7 @@ my-plugin/
 |----------|------|---------------|-----------------|
 | `pyright-lsp` | Python | `pyright-langserver` | `pip install pyright` |
 | `typescript-lsp` | TypeScript / JavaScript | `typescript-language-server` | `npm install -g typescript-language-server typescript` |
-| `rust-lsp` | Rust | `rust-analyzer` | `rustup component add rust-analyzer` でインストール |
+| `rust-analyzer-lsp` | Rust | `rust-analyzer` | `rustup component add rust-analyzer` でインストール |
 
 #### LSP の機能
 
@@ -227,10 +229,14 @@ my-plugin/
   "version": "1.0.0",
   "userConfig": {
     "apiKey": {
+      "type": "string",
+      "title": "API key",
       "description": "API key for the service",
       "sensitive": true
     },
     "region": {
+      "type": "string",
+      "title": "Region",
       "description": "Deployment region",
       "default": "us-east-1"
     }
@@ -247,66 +253,83 @@ my-plugin/
   "hooks": {
     "PostToolUse": [
       {
-        "command": "node ${CLAUDE_PLUGIN_DATA}/track-usage.js"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}\"/scripts/track-usage.js \"${CLAUDE_PLUGIN_DATA}\"/usage.json"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-このディレクトリはプラグインのインストール時に自動作成される。ここに保存したファイルはプラグインがアンインストールされるまで保持される。
+このディレクトリ（`~/.claude/plugins/data/<id>/`）は最初に参照されたときに作成され、プラグインの更新をまたいで保持される。プラグインがインストールされている最後の場所からアンインストールすると削除される（`--keep-data` を渡した場合を除く）。
 
 ### バックグラウンドモニター（v2.1.105）
 
-プラグインは、セッション開始時やプラグインのスキル呼び出し時に自動起動するバックグラウンドモニターを登録できる。プラグインマニフェストにトップレベルの `monitors` キーを追加する：
+プラグインは、セッション開始時、またはプラグインのいずれかのスキルが初めて実行されたときに起動するバックグラウンドモニターを登録できる。`plugin.json` の `experimental.monitors`（または `monitors/monitors.json`）で宣言する：
 
 ```json
 {
   "name": "my-plugin",
   "version": "1.0.0",
-  "monitors": [
-    {
-      "command": "tail -f /var/log/app.log",
-      "trigger": "session_start"
-    }
-  ]
+  "experimental": {
+    "monitors": [
+      {
+        "name": "app-log",
+        "command": "tail -f /var/log/app.log",
+        "description": "Application log errors",
+        "when": "always"
+      }
+    ]
+  }
 }
 ```
 
-`trigger` フィールドが受け付ける値：
-- `"session_start"` — セッション開始時に自動でモニターを起動
-- `"skill_invoke"` — プラグインのスキルが呼ばれたときにモニターを起動
+`name`・`command`・`description` は必須。`when` が受け付ける値：
+- `"always"`（デフォルト）— セッション開始時とプラグインのリロード時に起動
+- `"on-skill-invoke:<skill>"` — そのスキルが初めて実行されたときに起動
+
+未知のキーはエラーとなり、プラグインは読み込まれない。トップレベルの `monitors` キーも引き続き読み込まれるが、`claude plugin validate` が警告を出す。
 
 モニターは内部的に Monitor ツールを利用しており、stdout の各行を Claude が反応できるイベントとしてストリーミングする。
 
 ## 設定によるインラインプラグイン（`source: 'settings'`）（v2.1.80 以降）
 
-プラグインは、`source: 'settings'` フィールドを使って設定ファイル中にマーケットプレイスエントリとしてインラインで定義できる。これにより、別個のリポジトリやマーケットプレイスを用意せずにプラグイン定義を直接埋め込める：
+プラグインは、`source: 'settings'` フィールドを使って設定ファイル中にマーケットプレイスエントリとしてインラインで定義できる。これにより、別個のリポジトリやマーケットプレイスを用意せずにプラグイン定義を直接埋め込める。`extraKnownMarketplaces.<name>.source` の下に宣言し、`name` はマーケットプレイスのキーと一致させる。含めるプラグインは GitHub や npm などの外部ソースを参照する必要がある（相対パスは拒否される）：
 
 ```json
 {
-  "pluginMarketplaces": [
-    {
-      "name": "inline-tools",
-      "source": "settings",
-      "plugins": [
-        {
-          "name": "quick-lint",
-          "source": "./local-plugins/quick-lint"
-        }
-      ]
+  "extraKnownMarketplaces": {
+    "inline-tools": {
+      "source": {
+        "source": "settings",
+        "name": "inline-tools",
+        "plugins": [
+          {
+            "name": "quick-lint",
+            "source": {
+              "source": "github",
+              "repo": "my-org/quick-lint"
+            }
+          }
+        ]
+      }
     }
-  ]
+  }
 }
 ```
 
 ## プラグインの設定
 
-プラグインはデフォルト設定を提供するために `settings.json` を同梱できる。現状サポートされるのは `agent` キーで、プラグインのメインスレッドエージェントを設定する：
+プラグインはデフォルト設定を提供するために `settings.json` を同梱できる。有効なキーは `agent` と `subagentStatusLine` の 2 つで、それ以外のキーは破棄される。`agent` にはプラグイン内のエージェント名を指定し、そのエージェントをメインスレッドとして実行する：
 
 ```json
 {
-  "agent": "agents/specialist-1.md"
+  "agent": "specialist-1"
 }
 ```
 
@@ -365,7 +388,7 @@ This command initiates a complete pull request review including:
 ---
 name: security-reviewer
 description: Security-focused code review
-tools: read, grep, diff
+tools: Read, Grep, Bash
 ---
 
 # Security Reviewer
@@ -380,7 +403,7 @@ Specializes in finding security vulnerabilities:
 **インストール：**
 
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # Result:
 # ✅ 3 slash commands installed
@@ -406,13 +429,10 @@ devops-automation/
 │   ├── incident-commander.md
 │   └── alert-analyzer.md
 ├── mcp/
-│   ├── github-config.json
-│   ├── kubernetes-config.json
-│   └── prometheus-config.json
+│   └── kubernetes-config.json
 ├── hooks/
 │   ├── pre-deploy.js
-│   ├── post-deploy.js
-│   └── on-error.js
+│   └── post-deploy.js
 └── scripts/
     ├── deploy.sh
     ├── rollback.sh
@@ -435,8 +455,7 @@ documentation/
 │   ├── code-commentator.md
 │   └── example-generator.md
 ├── mcp/
-│   ├── github-docs-config.json
-│   └── slack-announce-config.json
+│   └── github-docs-config.json
 └── templates/
     ├── api-endpoint.md
     ├── function-docs.md
@@ -485,7 +504,11 @@ graph TB
 | `extraKnownMarketplaces` | デフォルト以外のマーケットプレイスソースを追加 |
 | `strictKnownMarketplaces` | ユーザーが追加できるマーケットプレイスを制限（管理者専用） |
 | `blockedMarketplaces` | 管理者が管理するマーケットプレイスのブロックリスト（v2.1.119 以降は `hostPattern` / `pathPattern` の正規表現フィールドをサポート） |
-| `deniedPlugins` | 管理者が管理する、特定のプラグインをインストールさせないブロックリスト |
+| `enabledPlugins`（`false` に設定） | 特定のプラグインをブロック：managed settings で `"enabledPlugins": { "<plugin>@<marketplace>": false }` とすると、すべてのスコープでインストールがブロックされ、マーケットプレイスにも表示されない |
+
+> **より分かりやすいエイリアス（v2.1.232）**：`additionalMarketplaces` は `extraKnownMarketplaces` の、`allowedMarketplaces` は `strictKnownMarketplaces` のエイリアスとして受け付けられる。公式の settings リファレンスの [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases) に両方とも記載されている。古いバージョンはエイリアスを無視するため、正式なキーをそのまま使い続けて問題ない。
+
+> **オーナーのワイルドカード（v2.1.223 以降）**：`"owner/*"` エントリは、ある GitHub オーナー配下のすべてのマーケットプレイスリポジトリを許可またはブロックする。**`strictKnownMarketplaces` と `blockedMarketplaces` でのみ受け付けられる。** `extraKnownMarketplaces` や `/plugin marketplace add` を含め、`github` ソースが登場する他の箇所では、`repo` の値は単一のリポジトリを指定しなければならない。
 
 > **適用範囲**（v2.1.117 以降）：`blockedMarketplaces` と `strictKnownMarketplaces` は最初の追加時だけでなく、インストール・更新・リフレッシュ・自動更新といったあらゆるプラグインのライフサイクルイベントで適用される。`strictKnownMarketplaces` は管理者専用。
 
@@ -494,10 +517,8 @@ graph TB
 ```json
 {
   "blockedMarketplaces": [
-    {
-      "hostPattern": "^evil\\.example\\.com$",
-      "pathPattern": "^/marketplaces/.*"
-    }
+    { "source": "hostPattern", "hostPattern": "^evil\\.example\\.com$" },
+    { "source": "pathPattern", "pathPattern": "^/marketplaces/.*" }
   ]
 }
 ```
@@ -515,14 +536,14 @@ graph TB
 ```json
 {
   "name": "my-team-plugins",
-  "owner": "my-org",
+  "owner": { "name": "my-org" },
   "plugins": [
     {
       "name": "code-standards",
       "source": "./plugins/code-standards",
       "description": "Enforce team coding standards",
       "version": "1.2.0",
-      "author": "platform-team"
+      "author": { "name": "platform-team" }
     },
     {
       "name": "deploy-helper",
@@ -540,13 +561,13 @@ graph TB
 | フィールド | 必須 | 説明 |
 |----------|----|-----|
 | `name` | はい | kebab-case のマーケットプレイス名 |
-| `owner` | はい | マーケットプレイスを保守する組織またはユーザー |
+| `owner` | はい | マーケットプレイスを保守する組織またはユーザー：必須の `name` を持つオブジェクト（`email`、`url` は任意） |
 | `plugins` | はい | プラグインエントリの配列 |
 | `plugins[].name` | はい | プラグイン名（kebab-case） |
 | `plugins[].source` | はい | プラグインソース（パス文字列または source オブジェクト） |
 | `plugins[].description` | いいえ | プラグインの簡単な説明 |
 | `plugins[].version` | いいえ | セマンティックバージョン文字列 |
-| `plugins[].author` | いいえ | プラグイン作者名 |
+| `plugins[].author` | いいえ | プラグイン作者：必須の `name` を持つオブジェクト（`email`、`url` は任意） |
 
 ### プラグインソースの種類
 
@@ -559,7 +580,6 @@ graph TB
 | **Git URL** | `{ "source": "url", "url": "..." }` | `{ "source": "url", "url": "https://git.internal/plugin.git" }` |
 | **Git サブディレクトリ** | `{ "source": "git-subdir", "url": "...", "path": "..." }` | `{ "source": "git-subdir", "url": "https://github.com/org/monorepo.git", "path": "packages/plugin" }` |
 | **npm** | `{ "source": "npm", "package": "..." }` | `{ "source": "npm", "package": "@acme/claude-plugin", "version": "^2.0" }` |
-| **pip** | `{ "source": "pip", "package": "..." }` | `{ "source": "pip", "package": "claude-data-plugin", "version": ">=1.0" }` |
 
 GitHub および git ソースは、バージョンピン留め用に任意の `ref`（ブランチ / タグ）と `sha`（コミットハッシュ）フィールドをサポートする。
 
@@ -578,7 +598,7 @@ GitHub および git ソースは、バージョンピン留め用に任意の `
 
 **プライベートリポジトリ**：git の credential helper や環境変数のトークン経由でサポートされる。ユーザーは対象リポジトリへの読み取り権限を持っている必要がある。
 
-**公式マーケットプレイスへの提出**：[claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) または [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit) から、Anthropic がキュレートする公式マーケットプレイスにプラグインを提出して広く配布できる。
+**Anthropic のディレクトリへの提出**：開発者ポータル [claude.ai/directory/manage](https://claude.ai/directory/manage) から Anthropic のディレクトリにプラグインを提出して広く配布できる。Anthropic の公式マーケットプレイス `claude-plugins-official` はディレクトリポータル経由の提出を受け付けていない。
 
 ### マーケットプレイスの管理
 
@@ -607,13 +627,13 @@ claude plugin marketplace list               # List configured marketplaces
 |----|----|
 | 未設定 | 制限なし — ユーザーは任意のマーケットプレイスを追加可能 |
 | 空配列 `[]` | ロックダウン — マーケットプレイスを追加不可 |
-| パターン配列 | 許可リスト — 一致するマーケットプレイスのみ追加可能 |
+| ソースオブジェクトの配列 | 許可リスト — 一致するマーケットプレイスのみ追加可能 |
 
 ```json
 {
   "strictKnownMarketplaces": [
-    "my-org/*",
-    "github.com/trusted-vendor/*"
+    { "source": "github", "repo": "my-org/*" },
+    { "source": "github", "repo": "trusted-vendor/*" }
   ]
 }
 ```
@@ -662,11 +682,11 @@ claude plugin update <name>                  # Update installed plugin to latest
 claude plugin list                           # List installed plugins
 claude plugin enable <name>                  # Enable a disabled plugin
 claude plugin disable <name>                 # Disable a plugin
-claude plugin validate                       # Validate plugin structure
-claude plugin tag <version>                  # Create a release git tag with version validation (v2.1.118+)
+claude plugin validate <path>                # Validate the plugin structure at <path>
+claude plugin tag [path]                     # Create a {name}--v{version} release git tag (v2.1.118+)
 ```
 
-例：`claude plugin tag v0.3.0` はバージョン形式を検証し、対応する git タグを作成する。配布用にプラグインをリリースする際の推奨手順である。
+例：`claude plugin tag ./my-plugin` は引数にバージョン文字列ではなく**パス**を取る。`plugin.json` から導出した `{name}--v{version}` の git タグを作成し、その際 `plugin.json` と（存在すれば）マーケットプレイスのエントリが一致しているか検証する。配布用にプラグインをリリースする際の推奨手順である。
 
 ## インストール方法
 
@@ -676,6 +696,15 @@ claude plugin tag <version>                  # Create a release git tag with ver
 # or from CLI:
 claude plugin install plugin-name@marketplace-name
 ```
+
+**すぐに反映されるか？** **v2.1.221** 以降はたいてい反映される。インストール要約の最終行を確認する：
+
+| インストール要約の表示 | 意味 |
+|---|---|
+| `Plugin is now active.` | Claude Code がインストールの一環としてプラグインを有効化した。追加の操作は不要。 |
+| `Run /reload-plugins to activate.` | インストールは済んだがまだ有効ではない。有効化するとプロンプトキャッシュが無効になるため、または有効化の試行が失敗したため。 |
+
+v2.1.221 より前は、`/reload-plugins` を実行するか再起動するまで、どのインストールも現在のセッションには反映されなかった。
 
 ### 有効化 / 無効化（スコープは自動検出）
 ```bash
@@ -692,7 +721,9 @@ claude --plugin-dir ./plugin-a --plugin-dir ./plugin-b
 
 ### Git リポジトリから
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # GitHub リポジトリをマーケットプレイスとして追加
+/plugin install plugin-name@marketplace-name             # 次にそこからプラグインをインストール
+/plugin install plugin-name --marketplace username/repo  # または 1 ステップで両方を実行（v2.1.275+）
 ```
 
 ## 自動更新
@@ -707,7 +738,7 @@ Claude Code は起動時にマーケットプレイスとそこにインスト�
 自動更新が走ると、Claude Code は次の処理を行う：
 1. マーケットプレイスのカタログを更新
 2. インストール済みプラグインを最新バージョンへ更新
-3. `/reload-plugins` を促す通知を表示
+3. プラグインごとに結果を報告する：更新の一環として有効化された場合は `Plugin is now active.`、そうでない場合は `Run /reload-plugins to activate.`
 
 ### 環境変数
 
@@ -787,23 +818,28 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 | 設定 | 説明 |
 |-----|-----|
 | `enabledPlugins` | デフォルトで有効化するプラグインの許可リスト |
-| `deniedPlugins` | インストールを禁止するプラグインのブロックリスト |
+| `enabledPlugins`（`false` に設定） | 特定のプラグインをブロック：managed settings で `"enabledPlugins": { "<plugin>@<marketplace>": false }` とすると、すべてのスコープでインストールがブロックされ、マーケットプレイスにも表示されない |
 | `extraKnownMarketplaces` | デフォルト以外のマーケットプレイスソースを追加 |
 | `strictKnownMarketplaces` | ユーザーが追加できるマーケットプレイスを制限（管理者専用、v2.1.117 以降はあらゆるプラグインのライフサイクルイベントで適用） |
 | `blockedMarketplaces` | マーケットプレイスのブロックリスト（v2.1.117 以降はあらゆるライフサイクルイベントで適用、v2.1.119 以降は `hostPattern` / `pathPattern` の正規表現フィールドをサポート） |
-| `allowedChannelPlugins` | リリースチャネルごとに許可するプラグインを制御 |
+| `allowedChannelPlugins` | セッションにメッセージをプッシュできる [channel](https://code.claude.com/docs/en/channels) プラグインの許可リスト（各エントリは `marketplace` と `plugin` を指定） |
+
+> **より分かりやすいエイリアス（v2.1.232）**：`additionalMarketplaces` は `extraKnownMarketplaces` の、`allowedMarketplaces` は `strictKnownMarketplaces` のエイリアスとして受け付けられる。公式の settings リファレンスの [Marketplace key aliases](https://code.claude.com/docs/en/settings-reference#marketplace-key-aliases) に両方とも記載されている。古いバージョンはエイリアスを無視するため、正式なキーをそのまま使い続けて問題ない。
+
+> **オーナーのワイルドカード（v2.1.223 以降）**：`"owner/*"` エントリは、ある GitHub オーナー配下のすべてのマーケットプレイスリポジトリを許可またはブロックする。**`strictKnownMarketplaces` と `blockedMarketplaces` でのみ受け付けられる。** `extraKnownMarketplaces` や `/plugin marketplace add` を含め、`github` ソースが登場する他の箇所では、`repo` の値は単一のリポジトリを指定しなければならない。
 
 これらの設定は管理対象設定ファイルで組織レベルに適用でき、ユーザーレベルの設定より優先される。
 
 ## プラグインのセキュリティ
 
-プラグインのサブエージェントは制限付きサンドボックスで動作する。プラグインのサブエージェント定義では以下のフロントマターキーは **使用不可** である：
+プラグインのサブエージェントは以下のフロントマターキーを **無視する**（エージェント自体は読み込まれるが、これらのキーは効果を持たない）：
 
 - `hooks` — サブエージェントはイベントハンドラを登録できない
 - `mcpServers` — サブエージェントは MCP サーバーを設定できない
 - `permissionMode` — サブエージェントは権限モデルを上書きできない
+- `initialPrompt` — プラグインエージェントは最初のプロンプトを自動送信できない
 
-これにより、プラグインが宣言したスコープを超えて権限昇格したりホスト環境を変更したりできないようにしている。
+エージェントファイル単体ではフックや MCP サーバーを追加できないため、それらはプラグインレベルのフックおよび MCP サーバーとして同梱する。
 
 ## プラグインの公開
 
@@ -813,7 +849,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 2. `.claude-plugin/plugin.json` マニフェストを記述
 3. ドキュメント用の `README.md` を作成
 4. `claude --plugin-dir ./my-plugin` でローカルテスト
-5. `claude plugin tag v0.3.0`（v2.1.118 以降）でリリースタグを作成 — バージョン文字列を検証し、対応する git タグを作成
+5. `claude plugin tag ./my-plugin`（v2.1.118 以降）でリリースタグを作成 — プラグインの**パス**を渡すと、`plugin.json` から導出した `{name}--v{version}` の git タグを作成
 6. プラグインマーケットプレイスへ提出
 7. レビューと承認を受ける
 8. マーケットプレイスで公開
@@ -821,7 +857,7 @@ claude --plugin-dir ./my-plugin --plugin-dir ./another-plugin
 
 **提出例：**
 
-```markdown
+````markdown
 # PR Review Plugin
 
 ## Description
@@ -835,7 +871,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ## Installation
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ## Features
@@ -853,10 +889,10 @@ Complete PR review workflow with security, testing, and documentation checks.
 ```
 
 ## Requirements
-- Claude Code 1.0+
+- Claude Code 2.1+
 - GitHub access
 - CodeQL (optional)
-```
+````
 
 ## プラグイン vs 手動設定
 
@@ -870,7 +906,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 **プラグインを使う場合（2 分）：**
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # ✅ Everything installed and configured
 # ✅ Ready to use immediately
 # ✅ Team can reproduce exact setup
@@ -906,15 +942,12 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ### マーケットプレイスからインストール
 
-1. **利用可能なプラグインを閲覧：**
+1. **利用可能なプラグインを閲覧**（**Discover** タブにマーケットプレイスのプラグインが一覧表示される。`/plugin list` はインストール済みのプラグインのみ表示）：
    ```bash
-   /plugin list
+   /plugin
    ```
 
-2. **プラグインの詳細を表示：**
-   ```bash
-   /plugin info plugin-name
-   ```
+2. **プラグインの詳細を表示：** **Discover** タブでプラグインを選択すると詳細が開く。（`claude plugin details plugin-name` はプラグインが読み込まれている場合のみ動作する：インストール済み、または `--plugin-dir` で指定）
 
 3. **プラグインをインストール：**
    ```bash
@@ -924,25 +957,32 @@ Complete PR review workflow with security, testing, and documentation checks.
 ### ローカルパスからインストール
 
 ```bash
-/plugin install ./path/to/plugin-directory
+# /plugin install には name@marketplace が必要。パスを渡すと "marketplace not found" になる
+claude --plugin-dir ./path/to/plugin-directory
 ```
 
 ### GitHub からインストール
 
 ```bash
-/plugin install github:username/repo
+/plugin marketplace add username/repo                    # GitHub リポジトリをマーケットプレイスとして追加
+/plugin install plugin-name@marketplace-name             # 次にそこからプラグインをインストール
+/plugin install plugin-name --marketplace username/repo  # または 1 ステップで両方を実行（v2.1.275+）
 ```
 
 ### インストール済みプラグインの一覧
 
 ```bash
-/plugin list --installed
+/plugin list             # インストール済みの全プラグイン
+/plugin list --enabled   # 有効なプラグインのみ
+/plugin list --disabled  # 無効なプラグインのみ
 ```
 
 ### プラグインの更新
 
+更新には CLI 形式を使う。これは [`plugin update`](https://code.claude.com/docs/en/plugins-reference) として文書化されている形式であり、更新がある場合に Claude Code 自身が案内する形式でもある：
+
 ```bash
-/plugin update plugin-name
+claude plugin update plugin-name
 ```
 
 ### プラグインの無効化 / 有効化
@@ -996,7 +1036,7 @@ Complete PR review workflow with security, testing, and documentation checks.
 ## トラブルシューティング
 
 ### プラグインがインストールできない
-- Claude Code のバージョン互換性を確認：`/version`
+- Claude Code のバージョン互換性を確認：`claude --version`
 - JSON バリデーターで `plugin.json` の構文を検証
 - インターネット接続を確認（リモートプラグインの場合）
 - 権限を確認：`ls -la plugin/`
@@ -1005,18 +1045,18 @@ Complete PR review workflow with security, testing, and documentation checks.
 - `plugin.json` のパスが実際のディレクトリ構造と一致するか確認
 - ファイル権限を確認：`chmod +x scripts/`
 - コンポーネントファイルの構文を確認
-- ログを確認：`/plugin debug plugin-name`
+- コンポーネントの一覧を確認：`claude plugin details plugin-name`
 
 ### MCP 接続が失敗する
 - 環境変数が正しく設定されているか確認
 - MCP サーバーのインストール状況と健全性を確認
-- `/mcp test` で MCP 接続を単独で確認
+- `/mcp` で MCP サーバーの状態を確認
 - `mcp/` ディレクトリ内の MCP 設定を確認
 
 ### インストール後にコマンドが利用できない
-- プラグインが正しくインストールされているか確認：`/plugin list --installed`
-- プラグインが有効か確認：`/plugin status plugin-name`
-- Claude Code を再起動：`exit` して再度開く
+- プラグインが正しくインストールされているか確認：`/plugin list`
+- プラグインが有効か確認：`/plugin list --enabled`
+- すでに有効化されているか確認 — [インストール方法](#インストール方法)のインストール要約の説明を参照：`Plugin is now active.` なら追加の操作は不要、`Run /reload-plugins to activate.` ならそのコマンドを実行する（再起動は不要）
 - 既存のコマンドと名前が衝突していないか確認
 
 ### フック実行の問題
@@ -1037,12 +1077,23 @@ Complete PR review workflow with security, testing, and documentation checks.
 
 ---
 
-**最終更新**: 2026 年 4 月 24 日
-**Claude Code バージョン**: 2.1.119
+**最終更新**: 2026 年 10 月 18 日
+**Claude Code バージョン**: 2.1.302
 **出典**:
+- https://code.claude.com/docs/en/discover-plugins
+- https://code.claude.com/docs/en/plugins-reference
+- https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/plugins
 - https://code.claude.com/docs/en/plugin-marketplaces
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.117
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.118
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.119
-**対応モデル**: Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins-reference#monitors
+- https://code.claude.com/docs/en/plugins/manifest-reference
+- https://code.claude.com/docs/en/plugins/marketplace-reference
+- https://code.claude.com/docs/en/plugins/components
+- https://code.claude.com/docs/en/plugins/publish
+- https://code.claude.com/docs/en/plugins/overview
+**対応モデル**: Claude Fable 5、Claude Opus 5、Claude Sonnet 5、Claude Sonnet 4.6、Claude Opus 4.8、Claude Haiku 4.5

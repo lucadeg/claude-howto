@@ -1,5 +1,4 @@
 ---
-name: System Status
 description: Перевірка загального стану та працездатності системи
 ---
 
@@ -13,3 +12,11 @@ description: Перевірка загального стану та праце�
 4. Перегляд частоти помилок
 5. Перевірка використання ресурсів
 6. Звіт про загальний стан
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

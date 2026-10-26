@@ -109,6 +109,28 @@ Server-Sent Events トランスポートは `http` の登場により非推奨�
 claude mcp add --transport sse legacy-server https://example.com/sse
 ```
 
+### WebSocket トランスポート（`ws`）
+
+WebSocket サーバーは持続的な双方向接続を保つため、Claude に対して自発的にイベントを push するリモート MCP サーバーに向いている。サーバーがリクエストに応答するだけなら HTTP を使うこと。HTTP は OAuth と `claude mcp add --transport` フラグの両方をサポートするが、WebSocket はどちらもサポートしない。
+
+`--transport` は `ws` を受け付けないため、`.mcp.json` または `claude mcp add-json` で設定する。
+
+```json
+{
+  "type": "ws",
+  "url": "wss://mcp.example.com/socket",
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN"
+  }
+}
+```
+
+`type: "ws"` のエントリは `http` と同じ `url`、`headers`、`headersHelper`、`timeout`、`alwaysLoad` フィールドを受け付ける。認証は**ヘッダーのみ**で、WebSocket サーバー向けの OAuth フローは存在しない。
+
+> **注意**: v2.1.285 以降、`claude mcp list` は WebSocket（`ws`）サーバーを URL とヘルスステータス付きで一覧表示する（それ以前のバージョンでは表示されなかった）。`claude mcp get <名前>` または `/mcp` パネルでも確認できる。
+
+HTTP や SSE と同様に、WebSocket 接続のアイドル時間は 5 分。stdio と WebSocket にはリクエスト単位のタイマーはない。`type` のない `url` エントリはエラーとなり、有効な値として `"http"`、`"sse"`、`"ws"` が示される。
+
 ### Windows 固有の注意点
 
 ネイティブ Windows（WSL ではない）では、npx コマンドに `cmd /c` を使う。
@@ -200,16 +222,17 @@ sequenceDiagram
 
 ## MCP ツール検索
 
-MCP ツールの説明文がコンテキストウィンドウの 10% を超える場合、Claude Code は自動的にツール検索を有効にし、モデルコンテキストを圧迫せずに適切なツールを効率的に選択する。
+ツール検索はデフォルトで有効。MCP ツールは遅延され、必要に応じて検出されるため、その定義がモデルコンテキストを埋めることはない。`ANTHROPIC_BASE_URL` がファーストパーティ以外のホストを指している場合、ほとんどのプロキシは必要なブロックを転送しないため、Claude Code はツール検索を無効にする。
 
 | 設定 | 値 | 説明 |
 |------|-----|------|
-| `ENABLE_TOOL_SEARCH` | `auto`（デフォルト） | ツールの説明がコンテキストの 10% を超えた時点で自動的に有効化 |
-| `ENABLE_TOOL_SEARCH` | `auto:<N>` | カスタムしきい値 `N` 個のツール数で自動的に有効化 |
-| `ENABLE_TOOL_SEARCH` | `true` | ツール数に関係なく常に有効 |
+| `ENABLE_TOOL_SEARCH` | （未設定 — デフォルト） | すべての MCP ツールを遅延し、必要に応じて読み込む |
+| `ENABLE_TOOL_SEARCH` | `auto` | しきい値モード：ツール定義がコンテキストウィンドウの 10% に達するまではツールを事前に読み込み、達した時点ですべてを遅延する |
+| `ENABLE_TOOL_SEARCH` | `auto:<N>` | カスタムのパーセンテージ（0-100）によるしきい値モード。例：`auto:5` で 5% |
+| `ENABLE_TOOL_SEARCH` | `true` | すべての MCP ツールを遅延 |
 | `ENABLE_TOOL_SEARCH` | `false` | 無効。すべてのツールの説明が完全な形で送信される |
 
-> **注意：** ツール検索には Sonnet 4 以降、もしくは Opus 4 以降が必要。Haiku モデルはツール検索をサポートしない。
+> **注意：** ツール検索には `tool_reference` ブロックをサポートするモデルが必要：Claude Opus 4、Claude Sonnet 4、Claude Haiku 4.5、およびそれ以降のモデル（Google Cloud の Agent Platform では Opus 4.5、Sonnet 4.5、Haiku 4.5 以降）。
 
 ## 動的ツール更新
 
@@ -225,7 +248,7 @@ MCP サーバーはインタラクティブダイアログを介してユーザ�
 
 ## ツール説明と指示の上限
 
-v2.1.84 以降、Claude Code は MCP サーバーごとのツール説明と指示に **2 KB の上限** を強制する。これは個々のサーバーが冗長すぎるツール定義でコンテキストを過剰に消費するのを防ぎ、コンテキストの肥大化を抑え、対話を効率的に保つ。
+Claude Code は、冗長なサーバーがコンテキストを肥大化させないよう、MCP ツールの説明と各サーバーの指示を切り詰める。デフォルトの上限は、サーバーの指示と最初から読み込まれるツールの説明が **4,096 文字**（v2.1.296。それ以前は v2.1.84 から 2,048 文字）、Claude が tool search 経由で読み込む説明が **16,384 文字**（v2.1.295）である。v2.1.280 以降は `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` で上書きでき、設定した数値が **両方** の上限を置き換える（`8192` なら短い方の上限は上がり、長い方は下がる）。v2.1.299 以降、`api.anthropic.com` にある Anthropic のファーストパーティ MCP サーバーの説明と指示は切り詰めずに Claude に届く。重要な情報は説明の冒頭近くに置くこと。
 
 ## MCP プロンプトをスラッシュコマンドとして利用
 
@@ -261,11 +284,22 @@ MCP サーバーはスラッシュコマンドとして表示されるプロン�
 
 MCP の設定は共有レベルの異なる複数のスコープに保存できる。
 
-| スコープ | 場所 | 説明 | 共有相手 | 承認の要否 |
-|----------|------|------|----------|-----------|
-| **Local**（デフォルト） | `~/.claude.json`（プロジェクトパス配下） | 現在のユーザー、現在のプロジェクトに非公開（旧バージョンでは `project` と呼ばれていた） | 自分のみ | 不要 |
-| **Project** | `.mcp.json` | git リポジトリにチェックインされる | チームメンバー | 必要（初回使用時） |
-| **User** | `~/.claude.json` | 全プロジェクトで利用可能（旧バージョンでは `global` と呼ばれていた） | 自分のみ | 不要 |
+| スコープ | フラグ | 場所 | 説明 | 共有相手 | 承認の要否 |
+|----------|--------|------|------|----------|-----------|
+| **Local**（デフォルト） | `--scope local` | `~/.claude.json`（プロジェクトパス配下） | 現在のユーザー、現在のプロジェクトに非公開（旧バージョンでは `project` と呼ばれていた） | 自分のみ | 不要 |
+| **Project** | `--scope project` | `.mcp.json` | git リポジトリにチェックインされる | チームメンバー | 必要（初回使用時） |
+| **User** | `--scope user` | `~/.claude.json` | 全プロジェクトで利用可能（旧バージョンでは `global` と呼ばれていた） | 自分のみ | 不要 |
+
+サーバー追加時のスコープは `--scope`（短縮形 `-s`）で選択する。省略した場合、
+Claude Code は `local` を使う。
+
+```bash
+# Project スコープ — .mcp.json に書き込まれ、チームで共有される
+claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
+
+# User スコープ — すべてのプロジェクトで利用できる
+claude mcp add --scope user --transport stdio memory -- npx @modelcontextprotocol/server-memory
+```
 
 ### Project スコープの使用
 
@@ -276,7 +310,10 @@ MCP の設定は共有レベルの異なる複数のスコープに保存でき�
   "mcpServers": {
     "github": {
       "type": "http",
-      "url": "https://api.github.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
     }
   }
 }
@@ -290,7 +327,7 @@ MCP の設定は共有レベルの異なる複数のスコープに保存でき�
 
 ```bash
 # HTTP ベースのサーバーを追加
-claude mcp add --transport http github https://api.github.com/mcp
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 
 # ローカル stdio サーバーを追加
 claude mcp add --transport stdio database -- npx @company/db-server
@@ -334,10 +371,10 @@ claude mcp add-from-claude-desktop
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -386,9 +423,9 @@ Reviewers: @bob, @charlie
 
 **セットアップ：**
 ```bash
-export GITHUB_TOKEN="your_github_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_token"
 # または CLI で直接追加:
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
 ### 設定での環境変数展開
@@ -418,7 +455,7 @@ MCP 設定は環境変数の展開とフォールバックデフォルトをサ�
 ```
 
 変数は実行時に展開される。
-- `${VAR}` - 環境変数を使用、未設定ならエラー
+- `${VAR}` - 環境変数を使用。未設定（かつデフォルトなし）の場合もサーバーはリテラルの `${VAR}` のまま読み込まれ、`claude mcp list` と `/mcp` が変数の欠落を警告する
 - `${VAR:-default}` - 環境変数を使用、未設定なら default にフォールバック
 
 ### 例 2：Database MCP のセットアップ
@@ -430,10 +467,7 @@ MCP 設定は環境変数の展開とフォールバックデフォルトをサ�
   "mcpServers": {
     "database": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-database"],
-      "env": {
-        "DATABASE_URL": "postgresql://user:pass@localhost/mydb"
-      }
+      "args": ["-y", "@bytebase/dbhub", "--dsn", "${DATABASE_URL}"]
     }
   }
 }
@@ -463,9 +497,47 @@ ORDER BY order_count DESC;
 **セットアップ：**
 ```bash
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-# または CLI で直接追加:
-claude mcp add --transport stdio database -- npx @modelcontextprotocol/server-database
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --dsn "$DATABASE_URL"
 ```
+
+> **Warning**: この設定では Claude に書き込み権限が与えられます。DBHub の `execute_sql` ツールは、読み取り専用モードを有効にしない限り、`UPDATE`、`DELETE`、`DROP` を含むあらゆる SQL を実行します。本番環境ではなく、ローカルまたは使い捨てのデータベースを使ってください。
+
+**読み取り専用の設定（推奨）：**
+
+`SELECT` だけを実行できるデータベースユーザーを作成します（PostgreSQL の例）：
+
+```sql
+CREATE ROLE claude_readonly LOGIN PASSWORD 'change-me';
+GRANT CONNECT ON DATABASE mydb TO claude_readonly;
+GRANT USAGE ON SCHEMA public TO claude_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO claude_readonly;
+```
+
+`dbhub.toml` で読み取り専用モードを有効にします。以前の `--readonly` フラグはもう使えません。DBHub は `${DATABASE_URL}` を環境変数から読み込むため、ファイルに認証情報を書く必要はありません：
+
+```toml
+[[sources]]
+id = "default"
+dsn = "${DATABASE_URL}"
+
+[[tools]]
+name = "execute_sql"
+source = "default"
+readonly = true
+```
+
+`--dsn` の代わりに、このファイルを DBHub に指定します。Claude Code は同じ名前のサーバーを重複して追加できないため、先に上で追加した書き込み可能な `database` サーバーを削除してください：
+
+```bash
+# 上で追加した書き込み可能なサーバーを置き換える
+claude mcp remove database
+export DATABASE_URL="postgresql://claude_readonly:change-me@localhost/mydb"
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --config "$PWD/dbhub.toml"
+```
+
+読み取り専用モードは SQL の文字列をチェックする仕組みで、過去に回避された例があります（DBHub 0.22.6 で修正済み）。データを本当に守るのは `SELECT` 専用ユーザーです。詳しくは [DBHub の読み取り専用モード](https://dbhub.ai/tools/execute-sql#read-only-mode) を参照してください。
 
 ### 例 3：マルチ MCP ワークフロー
 
@@ -516,9 +588,10 @@ Final Output:
 
 **セットアップ：**
 ```bash
-export GITHUB_TOKEN="your_github_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_token"
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-export SLACK_TOKEN="your_slack_token"
+export SLACK_BOT_TOKEN="your_slack_bot_token"
+export SLACK_TEAM_ID="your_slack_team_id"
 # 各 MCP サーバーを CLI で追加するか、.mcp.json で設定する
 ```
 
@@ -599,9 +672,10 @@ sequenceDiagram
 
 ```bash
 # ~/.bashrc or ~/.zshrc
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxxx"
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_xxxxxxxxxxxxx"
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-export SLACK_TOKEN="xoxb-xxxxxxxxxxxxx"
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 ```
 
 そして MCP 設定で参照する。
@@ -609,7 +683,7 @@ export SLACK_TOKEN="xoxb-xxxxxxxxxxxxx"
 ```json
 {
   "env": {
-    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
   }
 }
 ```
@@ -633,42 +707,61 @@ claude mcp add --transport stdio claude-agent -- claude mcp serve
 
 ## 管理対象 MCP 設定（エンタープライズ）
 
-エンタープライズ展開では、IT 管理者が `managed-mcp.json` 設定ファイルを通じて MCP サーバーポリシーを強制できる。このファイルは、組織全体で許可または禁止する MCP サーバーを排他的に制御する。
+エンタープライズ展開では、IT 管理者は 2 つの独立した仕組みで MCP サーバーポリシーを強制する。固定のサーバー群を排他的な制御下で配布する `managed-mcp.json` ファイルと、設定済みのどのサーバーを読み込めるかをフィルタする `allowedMcpServers` / `deniedMcpServers` の設定キーである。
 
 **配置場所：**
 - macOS: `/Library/Application Support/ClaudeCode/managed-mcp.json`
-- Linux: `~/.config/ClaudeCode/managed-mcp.json`
-- Windows: `%APPDATA%\ClaudeCode\managed-mcp.json`
+- Linux および WSL: `/etc/claude-code/managed-mcp.json`
+- Windows: `C:\Program Files\ClaudeCode\managed-mcp.json`
 
-**機能：**
-- `allowedMcpServers` -- 許可するサーバーのホワイトリスト
-- `deniedMcpServers` -- 禁止するサーバーのブロックリスト
-- サーバー名、コマンド、URL パターンによるマッチをサポート
-- ユーザー設定より前に組織全体の MCP ポリシーを強制
-- 認可されていないサーバー接続を防止
+`managed-mcp.json` はプロジェクトの `.mcp.json` と同じ形式、すなわちトップレベルの `mcpServers` マップを使う。サーバーを配布するものであり、フィルタするものではない。
+
+```json
+{
+  "mcpServers": {
+    "example-remote": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp"
+    },
+    "company-internal": {
+      "type": "stdio",
+      "command": "/usr/local/bin/company-mcp-server",
+      "args": ["--config", "/etc/company/mcp-config.json"]
+    }
+  }
+}
+```
+
+このファイルはマシン上のどのユーザーからも読めるため、`env` ブロックに認証情報を置いてはならない。代わりに `${VAR}` 展開、OAuth、または `headersHelper` を使う。
+
+**フィルタリング：許可リストと拒否リスト**
+
+`allowedMcpServers` と `deniedMcpServers` は **設定キーであり、`managed-mcp.json` のフィールドではない**。強制力を持たせるには、管理された設定ソース（server-managed settings、`managed-settings.json`、MDM プロファイル、またはレジストリ）に置く。
+
+- `allowedMcpServers` -- 許可するサーバーの許可リスト。同じ管理ソース内に `allowManagedMcpServersOnly: true` を併記する。併記しないと許可リストがすべてのスコープからマージされ、ユーザーが許可範囲を広げられてしまう。
+- `deniedMcpServers` -- ブロックするサーバーの拒否リスト。常にすべてのスコープからマージされる。
+
+各エントリは **単一の** キーを持つオブジェクトである。
+
+| キー | マッチ対象 |
+|-----|-----------|
+| `serverUrl` | リモートサーバーの URL。完全一致、または `*` ワイルドカード付き |
+| `serverCommand` | stdio サーバーを起動する正確なコマンドと引数を配列で指定。すべての引数を順序どおりに |
+| `serverName` | ユーザーが付けたラベル。**完全一致のみ。ワイルドカードは展開されない** |
 
 **設定例：**
 
 ```json
 {
   "allowedMcpServers": [
-    {
-      "serverName": "github",
-      "serverUrl": "https://api.github.com/mcp"
-    },
-    {
-      "serverName": "company-internal",
-      "serverCommand": "company-mcp-server"
-    }
+    { "serverUrl": "https://mcp.example.com/*" },
+    { "serverCommand": ["/usr/local/bin/company-mcp-server", "--config", "/etc/company/mcp-config.json"] }
   ],
   "deniedMcpServers": [
-    {
-      "serverName": "untrusted-*"
-    },
-    {
-      "serverUrl": "http://*"
-    }
-  ]
+    { "serverName": "untrusted-server" },
+    { "serverUrl": "http://*" }
+  ],
+  "allowManagedMcpServersOnly": true
 }
 ```
 
@@ -703,6 +796,8 @@ MCP サーバーはエージェントのフロントマター内で `mcpServers:
 
 ```yaml
 ---
+name: my-tool-agent
+description: Uses my-tool for specialized operations
 mcpServers:
   my-tool:
     type: http
@@ -721,7 +816,7 @@ Claude Code はコンテキストオーバーフローを防ぐため、MCP ツ�
 | 上限 | しきい値 | 動作 |
 |------|----------|------|
 | **警告** | 10,000 トークン | 出力が大きいことを示す警告を表示 |
-| **デフォルト最大値** | 25,000 トークン | この上限を超えた出力は切り詰められる |
+| **デフォルト最大値** | 25,000 トークン | この上限を超えた出力はファイルに保存され、会話にはそのファイルパスが入る |
 | **ディスク永続化** | 50,000 文字 | 50K 文字を超えるツール結果はディスクに永続化される |
 
 最大出力上限は `MAX_MCP_OUTPUT_TOKENS` 環境変数で設定可能。
@@ -994,7 +1089,7 @@ MCPorter は上述のコード実行アプローチを補完するもので、MC
 
 1. **最初の MCP サーバーを追加**（例：GitHub）：
 ```bash
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
    または、プロジェクトルートに `.mcp.json` ファイルを作成：
@@ -1002,10 +1097,10 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -1014,7 +1109,7 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 
 2. **環境変数を設定：**
 ```bash
-export GITHUB_TOKEN="your_github_personal_access_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_personal_access_token"
 ```
 
 3. **接続をテスト：**
@@ -1037,7 +1132,7 @@ npm install -g @modelcontextprotocol/server-github
 
 **Database MCP：**
 ```bash
-npm install -g @modelcontextprotocol/server-database
+npm install -g @bytebase/dbhub
 ```
 
 **Filesystem MCP：**
@@ -1045,7 +1140,7 @@ npm install -g @modelcontextprotocol/server-database
 npm install -g @modelcontextprotocol/server-filesystem
 ```
 
-**Slack MCP：**
+**Slack MCP（非推奨パッケージ）：**
 ```bash
 npm install -g @modelcontextprotocol/server-slack
 ```
@@ -1064,10 +1159,10 @@ npm install -g @modelcontextprotocol/server-github
 ### 認証失敗
 ```bash
 # 環境変数が設定されているか確認
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 
 # 必要なら再設定
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 
 # トークンが正しい権限を持つか確認
 # GitHub のトークンスコープは https://github.com/settings/tokens で確認
@@ -1115,10 +1210,17 @@ export GITHUB_TOKEN="your_token"
 
 ---
 
-**最終更新：** 2026 年 4 月 24 日
-**Claude Code バージョン：** 2.1.119
+**最終更新：** 2026 年 10 月 18 日
+**Claude Code バージョン：** 2.1.302
 **情報源：**
 - https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/mcp#configure-tool-search
+- https://code.claude.com/docs/en/managed-mcp
 - https://code.claude.com/docs/en/changelog
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.117
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.285
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.296
+- https://code.claude.com/docs/en/mcp#tool-search-for-mcp-server-authors
+- https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcp-json
+- https://code.claude.com/docs/en/sub-agents
 **対応モデル：** Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5

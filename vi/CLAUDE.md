@@ -12,7 +12,7 @@ Claude How To là một repository tutorial về các tính năng của Claude C
 
 ### Kiểm Tra Chất Lượng Pre-commit
 
-Tất cả documentation phải vượt qua bốn kiểm tra chất lượng trước khi commit (các kiểm tra này chạy tự động qua pre-commit hooks):
+Tất cả documentation phải vượt qua năm kiểm tra chất lượng trước khi commit (các kiểm tra này chạy tự động qua pre-commit hooks):
 
 ```bash
 # Cài đặt pre-commit hooks (chạy trên mỗi commit)
@@ -22,12 +22,14 @@ pre-commit install
 pre-commit run --all-files
 ```
 
-Bốn kiểm tra là:
+Năm kiểm tra là:
 1. **markdown-lint** — Cấu trúc và định dạng Markdown qua `markdownlint`
 2. **cross-references** — Liên kết nội bộ, anchors, cú pháp code fence (Python script)
 3. **mermaid-syntax** — Xác thực tất cả sơ đồ Mermaid parse đúng (Python script)
 4. **link-check** — Các URL bên ngoài có thể truy cập được (Python script)
-5. **build-epub** — EPUB tạo ra không có lỗi (khi có thay đổi `.md`)
+5. **markdown-rendering** — Markdown render không lỗi (Python script)
+
+Việc build EPUB **không phải** là một pre-commit hook — nó chỉ chạy trong CI (job `build-epub` trong `.github/workflows/test.yml`), vì đây là bản build toàn bộ sách, chạy chậm; hook mermaid-syntax đã render mọi sơ đồ bằng cùng bundle Pele.
 
 ### Thiết Lập Môi Trường Phát Triển
 
@@ -40,9 +42,11 @@ uv venv
 source .venv/bin/activate
 uv pip install -r scripts/requirements-dev.txt
 
-# Cài đặt Node.js tools (markdown linter và Mermaid validator)
+# Cài đặt Node.js tools (markdown linter)
 npm install -g markdownlint-cli
-npm install -g @mermaid-js/mermaid-cli
+
+# Sơ đồ Mermaid được render bằng Pele: cần Node.js >= 20, không cần cài package toàn cục
+node --version
 
 # Cài đặt pre-commit hooks
 uv pip install pre-commit
@@ -81,11 +85,11 @@ mypy scripts/ --ignore-missing-imports
 ### Build EPUB
 
 ```bash
-# Tạo ebook (render Mermaid diagrams qua Kroki.io API)
+# Tạo ebook (render Mermaid diagrams bằng Pele — cần Node.js >= 20; bundle cố định chỉ tải về một lần)
 uv run scripts/build_epub.py
 
 # Với các tùy chọn
-uv run scripts/build_epub.py --verbose --output custom-name.epub --max-concurrent 5
+uv run scripts/build_epub.py --verbose --output custom-name.epub --lang vi
 ```
 
 ## Cấu Trúc Thư Mục
@@ -102,7 +106,7 @@ uv run scripts/build_epub.py --verbose --output custom-name.epub --max-concurren
 ├── 09-advanced-features/   # Lập kế hoạch, suy nghĩ, background tasks
 ├── 10-cli/                 # Tham chiếu CLI
 ├── scripts/
-│   ├── build_epub.py           # EPUB generator (render Mermaid qua Kroki API)
+│   ├── build_epub.py           # EPUB generator (render Mermaid bằng Pele)
 │   ├── check_cross_references.py   # Xác thực liên kết nội bộ
 │   ├── check_links.py          # Kiểm tra các URL bên ngoài
 │   ├── check_mermaid.py        # Xác thực cú pháp Mermaid
@@ -122,7 +126,7 @@ Mỗi thư mục đánh số tuân theo pattern:
 
 ### Sơ Đồ Mermaid
 - Tất cả sơ đồ phải parse thành công (được kiểm tra bởi pre-commit hook)
-- EPUB build render sơ đồ qua Kroki.io API (cần internet)
+- EPUB build render sơ đồ bằng Pele (cần Node.js >= 20; bundle cố định chỉ tải về trong lần chạy đầu tiên, sau đó chạy offline)
 - Sử dụng Mermaid cho flowcharts, sequence diagrams, và architecture visuals
 
 ### Cross-References
@@ -141,9 +145,9 @@ Mỗi thư mục đánh số tuân theo pattern:
 
 2. **Scripts là các tiện ích, không phải sản phẩm** — Các script Python trong `scripts/` hỗ trợ chất lượng documentation và tạo EPUB. Nội dung thực tế nằm trong các thư mục module đánh số.
 
-3. **Pre-commit là người gác cổng** — Tất cả bốn kiểm tra chất lượng phải pass trước khi PR được chấp nhận. CI pipeline chạy các kiểm tra tương tự như lần thứ hai.
+3. **Pre-commit là người gác cổng** — Tất cả năm kiểm tra chất lượng phải pass trước khi PR được chấp nhận. CI pipeline chạy các kiểm tra tương tự như lần thứ hai.
 
-4. **Mermaid rendering cần network** — EPUB build gọi Kroki.io API để render diagrams. Các lỗi build ở đây thường là vấn đề network hoặc cú pháp Mermaid không hợp lệ.
+4. **Mermaid rendering cần Node.js >= 20** — EPUB build chạy bundle Pele cố định bằng Node.js để render diagrams (bundle chỉ tải về trong lần chạy đầu tiên, được kiểm tra sha256 và lưu cache). Các lỗi build ở đây thường là do chưa cài Node.js >= 20, tải bundle thất bại, hoặc cú pháp Mermaid không hợp lệ. Các hook mermaid của pre-commit chạy ở chế độ strict với Node.js 22 do pre-commit cung cấp, nên chúng sẽ báo lỗi thay vì bỏ qua. Bản thân EPUB build không chạy trong pre-commit — nó chỉ chạy trong CI.
 
 5. **Đây là tutorial, không phải thư viện** — Khi thêm nội dung, tập trung vào giải thích rõ ràng, ví dụ copy-paste, và sơ đồ trực quan. Giá trị nằm ở việc dạy các khái niệm, không cung cấp code có thể tái sử dụng.
 

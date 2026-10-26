@@ -1,5 +1,4 @@
 ---
-name: Review PR
 description: 启动包含安全与测试检查的完整 PR 审查
 ---
 
@@ -12,3 +11,11 @@ description: 启动包含安全与测试检查的完整 PR 审查
 3. 文档更新
 4. 代码质量检查
 5. 性能影响评估
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

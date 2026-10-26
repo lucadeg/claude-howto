@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Claude Code 示例 - 完整索引
@@ -214,11 +214,13 @@ blog-draft/
 
 **使用方式**：在设置中配置后自动执行
 
-**Hook 类型**（4 类，25 个事件）：
-- 工具 Hook：`PreToolUse`、`PostToolUse`、`PostToolUseFailure`、`PermissionRequest`
-- 会话 Hook：`SessionStart`、`SessionEnd`、`Stop`、`StopFailure`、`SubagentStart`、`SubagentStop`
-- 任务 Hook：`UserPromptSubmit`、`TaskCompleted`、`TaskCreated`、`TeammateIdle`
-- 生命周期 Hook：`ConfigChange`、`CwdChanged`、`FileChanged`、`PreCompact`、`PostCompact`、`WorktreeCreate`、`WorktreeRemove`、`Notification`、`InstructionsLoaded`、`Elicitation`、`ElicitationResult`
+**Hook 类型**（5 种）：`command`、`http`、`prompt`、`mcp_tool`、`agent` — 决定 hook 如何运行。
+
+**Hook 事件**（33 个，分 4 类）— 决定 hook 何时运行：
+- 工具 Hook：`PreToolUse`、`PostToolUse`、`PostToolUseFailure`、`PostToolBatch`、`PermissionRequest`、`PermissionDenied`
+- 会话 Hook：`SessionStart`、`Setup`、`SessionEnd`、`Stop`、`StopFailure`、`SubagentStart`、`SubagentStop`
+- 任务 Hook：`UserPromptSubmit`、`UserPromptExpansion`、`MessageDisplay`、`TaskCompleted`、`TaskCreated`、`TeammateIdle`（TaskCompleted/TaskCreated 仅在启用 todo 工具时触发 —— 默认仅在 Claude 3.x、Opus 4 至 4.7、Sonnet 4 至 4.6、Haiku 4.5 上可用；`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` 可恢复）
+- 生命周期 Hook：`ConfigChange`、`CwdChanged`、`DirectoryAdded`、`FileChanged`、`PreCompact`、`PostCompact`、`PreModelSwitch`、`PostModelSwitch`、`WorktreeCreate`、`WorktreeRemove`、`Notification`、`InstructionsLoaded`、`Elicitation`、`ElicitationResult`
 
 ---
 
@@ -251,7 +253,7 @@ pr-review/
 
 **命令**：`/review-pr`、`/check-security`、`/check-tests`
 
-**安装**：`/plugin install pr-review`
+**安装**：`claude --plugin-dir ./07-plugins/pr-review` （在仓库根目录运行）
 
 ### DevOps Automation 插件（15 个文件）
 
@@ -284,7 +286,7 @@ devops-automation/
 
 **命令**：`/deploy`、`/rollback`、`/status`、`/incident`
 
-**安装**：`/plugin install devops-automation`
+**安装**：`claude --plugin-dir ./07-plugins/devops-automation` （在仓库根目录运行）
 
 ### Documentation 插件（14 个文件）
 
@@ -314,7 +316,7 @@ documentation/
 
 **命令**：`/generate-api-docs`、`/generate-readme`、`/sync-docs`、`/validate-docs`
 
-**安装**：`/plugin install documentation`
+**安装**：`claude --plugin-dir ./07-plugins/documentation` （在仓库根目录运行）
 
 **补充**：`README.md` - 插件总览与使用指南
 
@@ -341,7 +343,7 @@ documentation/
 # 如需回退，按两次 Esc，或使用：
 /rewind
 # 然后选择：恢复代码和对话、恢复对话、
-# 恢复代码、从这里开始总结，或算了
+# 恢复代码、从这里开始总结、总结到这里，或算了
 ```
 
 **使用场景**：
@@ -365,7 +367,7 @@ documentation/
 
 **扩展功能**：
 - Scheduled Tasks：使用 `/loop` 和 cron 工具的周期任务
-- Chrome Integration：通过无头 Chromium 做浏览器自动化
+- Chrome Integration：通过 Claude in Chrome 扩展在你自己的 Chrome 中做浏览器自动化
 - Remote Control（扩展版）：连接方式、安全性、对比表
 - Keyboard Customization：自定义快捷键、组合键支持、上下文
 - Desktop App（扩展版）：连接器、`launch.json`、企业功能
@@ -391,9 +393,9 @@ documentation/
 - **default**：风险操作需要审批
 - **acceptEdits**：自动接受文件编辑，其他操作仍需审批
 - **plan**：只读分析，不做修改
-- **auto**：自动批准安全操作，风险操作仍提示
-- **dontAsk**：除危险操作外全部接受
-- **bypassPermissions**：全部接受（需要 `--dangerously-skip-permissions`）
+- **auto**：所有操作都执行，附带后台安全检查 — 由分类器审查命令和受保护目录的写入（通过 `autoMode` 设置对象配置）
+- **dontAsk**：只允许预先批准的工具 — 任何本来会弹出提示的调用都会被自动拒绝。Claude 只运行 `permissions.allow` 匹配项、只读 Bash 命令，以及被 `PreToolUse` hook 批准的调用
+- **bypassPermissions**：全部接受（使用 `--permission-mode bypassPermissions` 或等效的 `--dangerously-skip-permissions` 启用）
 
 #### Headless Mode（`claude -p`）
 - CI/CD 集成
@@ -422,7 +424,7 @@ documentation/
 - 自动化的重复工作流
 
 #### Chrome Integration
-- 通过无头 Chromium 进行浏览器自动化
+- 通过 Claude in Chrome 扩展在你自己的 Chrome 中进行浏览器自动化
 - 页面测试与抓取能力
 - 页面交互与数据提取
 
@@ -454,10 +456,10 @@ documentation/
 **核心 CLI 功能**：
 - `claude` - 启动交互式会话
 - `claude -p "prompt"` - 无头/非交互模式
-- `claude web` - 打开 Web 会话
+- `claude --cloud "task"` - 启动云端（Web）会话
 - `claude --model` - 选择模型（Sonnet 4.6、Opus 4.6）
 - `claude --permission-mode` - 设置权限模式
-- `claude --remote` - 通过 WebSocket 启用远程控制
+- `claude --remote-control` - 启动一个也能从 claude.ai 或 Claude 应用控制的会话
 
 ---
 
@@ -663,17 +665,17 @@ cp 01-slash-commands/optimize.md .claude/commands/
 cp 04-subagents/code-reviewer.md .claude/agents/
 
 # 安装 skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 或直接安装完整插件
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ### DevOps 与部署
 
 ```bash
 # 安装插件（包含全部功能）
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ### 文档
@@ -689,7 +691,7 @@ cp 04-subagents/documentation-writer.md .claude/agents/
 cp -r 03-skills/doc-generator ~/.claude/skills/
 
 # 或直接安装完整插件
-/plugin install documentation
+claude --plugin-dir ./07-plugins/documentation
 ```
 
 ### 团队规范
@@ -705,8 +707,10 @@ cp 02-memory/project-CLAUDE.md ./CLAUDE.md
 
 ```bash
 # 设置环境变量
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 
 # 安装 MCP 配置（项目级）
 cp 05-mcp/multi-mcp.json .mcp.json
@@ -817,13 +821,13 @@ claude -p "Run tests and report results"
 
 - `01-slash-commands/optimize.md` - 性能分析
 - `04-subagents/code-reviewer.md` - 性能审查
-- `03-skills/code-review/` - 性能指标
+- `03-skills/code-review-specialist/` - 性能指标
 - `07-plugins/pr-review/agents/performance-analyzer.md` - 性能专家
 
 ### 安全
 
 - `04-subagents/secure-reviewer.md` - 安全审查
-- `03-skills/code-review/` - 安全分析
+- `03-skills/code-review-specialist/` - 安全分析
 - `07-plugins/pr-review/` - 安全检查
 
 ### 测试
@@ -892,9 +896,19 @@ claude -p "Run tests and report results"
 
 ---
 
-**最后更新**：2026 年 3 月
+**最后更新**：2026 年 10 月 18 日
+**Claude Code 版本**：2.1.302
 **总示例数**：100+ 文件
 **分类数**：10 个功能
 **Hooks**：8 个自动化脚本
 **配置示例**：10+ 个场景
 **可直接使用**：所有示例
+**来源**：
+- https://code.claude.com/docs/en/tools-reference#task-tool-availability
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/permission-modes

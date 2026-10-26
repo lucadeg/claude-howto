@@ -28,10 +28,10 @@ cp 02-memory/personal-CLAUDE.md ~/.claude/CLAUDE.md
 ### Skills
 ```bash
 # Skills cá nhân
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # Skills dự án
-cp -r 03-skills/code-review .claude/skills/
+cp -r 03-skills/code-review-specialist .claude/skills/
 ```
 
 ### Tác Nhân Con
@@ -46,7 +46,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### MCP
 ```bash
 # Thiết lập thông tin xác thực
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
 
 # Cài đặt cấu hình (phạm vi dự án)
@@ -68,7 +68,7 @@ chmod +x ~/.claude/hooks/*.sh
 ### Plugins
 ```bash
 # Cài đặt từ ví dụ (nếu đã xuất bản)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 /plugin install devops-automation
 /plugin install documentation
 ```
@@ -95,9 +95,9 @@ chmod +x ~/.claude/hooks/*.sh
 # default        - Hỏi phê duyệt cho các hành động rủi ro
 # acceptEdits    - Tự động chấp nhận chỉnh sửa file, hỏi cho các hành động khác
 # plan           - Chỉ đọc phân tích, không sửa đổi
-# dontAsk        - Chấp nhận tất cả hành động trừ các hành động rủi ro
+# dontAsk        - Chỉ các tool đã phê duyệt trước được chạy; mọi thứ khác bị từ chối
 # auto           - Bộ phân loại nền quyết định quyền tự động
-# bypassPermissions - Chấp nhận tất cả hành động (yêu cầu --dangerously-skip-permissions)
+# bypassPermissions - Chấp nhận tất cả hành động (--permission-mode bypassPermissions; --dangerously-skip-permissions tương đương)
 
 # Quản lý phiên
 /resume                # Tiếp tục cuộc hội thoại trước
@@ -118,18 +118,18 @@ claude -r "session"    # Tiếp tục phiên theo tên/ID
 | **Skills** | `.claude/skills/*/SKILL.md` | Tự động gọi |
 | **Tác Nhân Con** | `.claude/agents/*.md` | Tự động ủy quyền |
 | **MCP** | `.mcp.json` (dự án) hoặc `~/.claude.json` (người dùng) | `/mcp__server__action` |
-| **Hooks (25 sự kiện)** | `~/.claude/hooks/*.sh` | Kích hoạt sự kiện (4 loại) |
+| **Hooks (33 sự kiện)** | `~/.claude/hooks/*.sh` | Kích hoạt sự kiện (5 loại) |
 | **Plugins** | Thông qua `/plugin install` | Gói tất cả |
 | **Checkpoints** | Được tích hợp sẵn | `Esc+Esc` hoặc `/rewind` |
 | **Chế Độ Lập Kế Hoạch** | Được tích hợp sẵn | `/plan <tác vụ>` |
 | **Chế Độ Quyền (6)** | Được tích hợp sẵn | `--allowedTools`, `--permission-mode` |
-| **Phiên Làm Việc** | Được tích hợp sẵn | `/session <lệnh>` |
+| **Phiên Làm Việc** | Được tích hợp sẵn | `/resume`, `/rename`, `/branch`, `/fork` |
 | **Tác Vụ Nền** | Được tích hợp sẵn | Chạy trong nền |
-| **Điều Khiển Từ Xa** | Được tích hợp sẵn | WebSocket API |
-| **Phiên Web** | Được tích hợp sẵn | `claude web` |
-| **Git Worktrees** | Được tích hợp sẵn | `/worktree` |
-| **Tự Động Bộ Nhớ** | Được tích hợp sẵn | Tự động lưu vào CLAUDE.md |
-| **Danh Sách Tác Vụ** | Được tích hợp sẵn | `/task list` |
+| **Điều Khiển Từ Xa** | Được tích hợp sẵn | `claude --remote-control` hoặc `/remote-control` |
+| **Phiên Web** | Được tích hợp sẵn | `claude --cloud "task"` |
+| **Git Worktrees** | Được tích hợp sẵn | `claude -w <name>` |
+| **Tự Động Bộ Nhớ** | Được tích hợp sẵn | Tự động lưu vào `~/.claude/projects/<project>/memory/` |
+| **Danh Sách Tác Vụ** | Được tích hợp sẵn | `Ctrl+T` (checklist), `/tasks` (công việc nền) |
 | **Skills Được Gói (5)** | Được tích hợp sẵn | `/simplify`, `/loop`, `/claude-api`, `/voice`, `/browse` |
 
 ---
@@ -147,11 +147,11 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 # Sử dụng: Tự động ủy quyền
 
 # Cách 3: Skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 # Sử dụng: Tự động gọi
 
 # Cách 4: Plugin (tốt nhất)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # Sử dụng: /review-pr
 ```
 
@@ -189,7 +189,7 @@ vim CLAUDE.md
 
 ### Tự Động Hóa & Hooks
 ```bash
-# Cài đặt hooks (25 sự kiện, 4 loại: command, http, prompt, agent)
+# Cài đặt hooks (33 sự kiện, 5 loại: command, http, mcp_tool, prompt, agent)
 mkdir -p ~/.claude/hooks
 cp 06-hooks/*.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
@@ -249,10 +249,10 @@ claude --permission-mode plan
 ### Đội Tác Nhân
 ```bash
 # Bật đội tác nhân
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # Hoặc trong settings.json
-{ "agentTeams": { "enabled": true } }
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
 
 # Bắt đầu với: "Triển khai tính năng X sử dụng cách tiếp cận đội"
 ```
@@ -262,15 +262,15 @@ export CLAUDE_AGENT_TEAMS=1
 # Chạy một lệnh mỗi 5 phút
 /loop 5m /check-status
 
-# Nhắc nhở một lần
-/loop 30m "nhắc tôi kiểm tra deploy"
+# Nhắc nhở một lần: hỏi bằng ngôn ngữ tự nhiên (/loop lặp lại cho đến khi bị hủy)
+nhắc tôi kiểm tra deploy sau 30 phút
 ```
 
 ---
 
 ## 📁 Tham Khảo Vị Trí File
 
-```
+```text
 Dự Án Của Bạn/
 ├── .claude/
 │   ├── commands/              # Lệnh slash đặt ở đây
@@ -290,9 +290,12 @@ Home Người Dùng/
 │   ├── skills/                # Skills cá nhân
 │   ├── hooks/                 # Script hooks
 │   ├── settings.json          # Cài đặt người dùng
-│   ├── managed-settings.d/    # Cài đặt được quản lý (doanh nghiệp/tổ chức)
 │   └── CLAUDE.md              # Bộ nhớ cá nhân
 └── .claude.json               # Cấu hình MCP cá nhân (phạm vi người dùng)
+
+Thư mục hệ thống/              # macOS /Library/Application Support/ClaudeCode/, Linux /etc/claude-code/, Windows C:\Program Files\ClaudeCode\
+├── managed-settings.json      # Cài đặt được quản lý (doanh nghiệp/tổ chức)
+└── managed-settings.d/        # Các file bổ sung cho cài đặt được quản lý
 ```
 
 ---
@@ -353,7 +356,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### Ngày 4-5
 ```bash
 # Thiết lập MCP
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 cp 05-mcp/github-mcp.json .mcp.json
 
 # Thử lệnh MCP
@@ -363,7 +366,7 @@ cp 05-mcp/github-mcp.json .mcp.json
 ### Tuần 2
 ```bash
 # Cài đặt skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # Để nó tự động gọi
 # Chỉ cần nói: "Review đoạn code này tìm lỗi"
@@ -372,7 +375,7 @@ cp -r 03-skills/code-review ~/.claude/skills/
 ### Tuần 3+
 ```bash
 # Cài đặt plugin hoàn chỉnh
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # Sử dụng tính năng được gói
 /review-pr
@@ -389,18 +392,18 @@ cp -r 03-skills/code-review ~/.claude/skills/
 | **Chế Độ Tự Động** | Vận hành hoàn toàn tự chủ với bộ phân loại nền | Cờ `--enable-auto-mode`, `Shift+Tab` để chuyển đổi chế độ |
 | **Kênh** | Tích hợp Discord và Telegram | Cờ `--channels`, bot Discord/Telegram |
 | **Nhập Liệu Giọng Nói** | Nói lệnh và bối cảnh cho Claude | Lệnh `/voice` |
-| **Hooks (25 sự kiện)** | Hệ thống hook mở rộng với 4 loại | Các loại hook command, http, prompt, agent |
+| **Hooks (33 sự kiện)** | Hệ thống hook mở rộng với 5 loại | Các loại hook command, http, mcp_tool, prompt, agent |
 | **MCP Elicitation** | MCP servers có thể yêu cầu input người dùng tại runtime | Tự động nhắc khi server cần làm rõ |
 | **WebSocket MCP** | Vận chuyển WebSocket cho kết nối MCP | Cấu hình trong `.mcp.json` với URL `ws://` |
 | **Plugin LSP** | Hỗ trợ Language Server Protocol cho plugins | `userConfig`, biến `${CLAUDE_PLUGIN_DATA}` |
-| **Điều Khiển Từ Xa** | Điều khiển Claude Code qua WebSocket API | `claude --remote` cho tích hợp bên ngoài |
-| **Phiên Web** | Giao diện Claude Code trên trình duyệt | `claude web` để khởi động |
+| **Điều Khiển Từ Xa** | Điều khiển phiên cục bộ từ claude.ai hoặc ứng dụng Claude | `claude --remote-control` (hoặc `/remote-control` trong phiên) |
+| **Phiên Web** | Phiên cloud tại claude.ai/code | `claude --cloud "task"` để khởi động từ terminal |
 | **Ứng Dụng Desktop** | Ứng dụng desktop native | Tải từ claude.ai/download |
-| **Danh Sách Tác Vụ** | Quản lý tác vụ nền | `/task list`, `/task status <id>` |
-| **Tự Động Bộ Nhớ** | Tự động lưu bộ nhớ từ cuộc hội thoại | Claude tự động lưu bối cảnh chính vào CLAUDE.md |
-| **Git Worktrees** | Không gian làm việc cô lập cho phát triển song song | `/worktree` để tạo không gian làm việc cô lập |
-| **Chọn Mô Hình** | Chuyển đổi giữa Sonnet 4.6 và Opus 4.6 | `/model` hoặc cờ `--model` |
-| **Đội Tác Nhân** | Phối hợp nhiều tác nhân trên tác vụ | Bật với biến môi trường `CLAUDE_AGENT_TEAMS=1` |
+| **Danh Sách Tác Vụ** | Quản lý tác vụ nền | `/tasks` (bí danh `/bashes`) |
+| **Tự Động Bộ Nhớ** | Tự động lưu bộ nhớ từ cuộc hội thoại | Claude lưu ghi chú vào `~/.claude/projects/<project>/memory/MEMORY.md`; quản lý bằng `/memory` |
+| **Git Worktrees** | Không gian làm việc cô lập cho phát triển song song | `claude --worktree <name>` (hoặc `-w`) |
+| **Chọn Mô Hình** | Chuyển đổi giữa Fable 5.1, Fable 5, Opus 5, Sonnet 5.5, Sonnet 5, Sonnet 4.6, Opus 4.8 và Haiku 4.5 | `/model` hoặc cờ `--model` (`sonnet` trỏ tới Sonnet 5.5 trên Anthropic API, v2.1.284+) |
+| **Đội Tác Nhân** | Phối hợp nhiều tác nhân trên tác vụ | Bật với biến môi trường `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (thử nghiệm) |
 | **Tác Vụ Định Kỳ** | Tác vụ định kỳ với `/loop` | `/loop 5m /command` hoặc công cụ CronCreate |
 | **Tích Hợp Chrome** | Tự động hóa trình duyệt | Cờ `--chrome` hoặc lệnh `/chrome` |
 | **Tùy Chỉnh Bàn Phím** | Phím tắt tùy chỉnh | Lệnh `/keybindings` |
@@ -431,7 +434,7 @@ ls -la .claude/agents/
 head -20 .claude/agents/code-reviewer.md
 
 # Kiểm tra kết nối MCP
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 ```
 
 ---
@@ -442,10 +445,10 @@ echo $GITHUB_TOKEN
 |------|----------|---------|
 | Lối tắt nhanh | Lệnh Slash (55+) | `01-slash-commands/optimize.md` |
 | Tiêu chuẩn đội | Bộ Nhớ | `02-memory/project-CLAUDE.md` |
-| Workflow tự động | Skill | `03-skills/code-review/` |
+| Workflow tự động | Skill | `03-skills/code-review-specialist/` |
 | Tác vụ chuyên biệt | Tác Nhân Con | `04-subagents/code-reviewer.md` |
 | Dữ liệu bên ngoài | MCP (+ Elicitation, WebSocket) | `05-mcp/github-mcp.json` |
-| Tự động hóa sự kiện | Hook (25 sự kiện, 4 loại) | `06-hooks/pre-commit.sh` |
+| Tự động hóa sự kiện | Hook (33 sự kiện, 5 loại) | `06-hooks/pre-commit.sh` |
 | Giải pháp hoàn chỉnh | Plugin (+ hỗ trợ LSP) | `07-plugins/pr-review/` |
 | Thử nghiệm an toàn | Checkpoint | `08-checkpoints/checkpoint-examples.md` |
 | Hoàn toàn tự chủ | Chế Độ Tự Động | `--enable-auto-mode` hoặc `Shift+Tab` |
@@ -504,3 +507,19 @@ Checklist bắt đầu:
 **Index Hoàn Chỉnh**: `cat INDEX.md`
 
 **Tham Khảo Này**: Giữ sẵn để tham khảo nhanh!
+
+---
+
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/memory#storage-location
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/model-config

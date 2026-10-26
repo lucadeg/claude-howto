@@ -22,12 +22,12 @@
 
 ## 組み込みコマンドリファレンス
 
-組み込みコマンドはよく使うアクションのショートカットである。**60 種類以上の組み込みコマンド**と **5 つの同梱スキル**が利用できる。Claude Code 上で `/` をタイプすると一覧が出る。`/` の後に文字を続けるとフィルタできる。
+組み込みコマンドはよく使うアクションのショートカットである。**60 種類以上の組み込みコマンド**と **約 20 の同梱スキル**が利用できる。Claude Code 上で `/` をタイプすると一覧が出る。`/` の後に文字を続けるとフィルタできる。
 
 | コマンド | 用途 |
 |---------|------|
 | `/add-dir <path>` | 作業ディレクトリを追加 |
-| `/agents` | エージェント設定を管理 |
+| `/agents` | 現在は動作するコマンドではない。対話型ウィザードは v2.1.198 で削除され、v2.1.281 以降 `/agents` は `/` メニューにも `/help` にも表示されない — 入力してもウィザードの移動先が説明されるだけ。サブエージェントの作成や管理は Claude に依頼するか、`.claude/agents/` のファイルを直接編集する |
 | `/branch [name]` | 会話を分岐させて新しいセッションにする（エイリアス: `/fork`）。注: `/fork` は v2.1.77 で `/branch` に改名 |
 | `/btw <question>` | Claude がメインタスクを進めている間に、メイン会話のコンテキストを汚さず一時的なサイド質問をする |
 | `/chrome` | Chrome ブラウザ統合を設定 |
@@ -40,13 +40,13 @@
 | `/cost` | `/usage` のタイピング用エイリアス — コストタブを開く（v2.1.118+） |
 | `/desktop` | Desktop アプリで継続（エイリアス: `/app`） |
 | `/diff` | 未コミット変更のインタラクティブ差分ビューア |
-| `/doctor` | インストール状態を診断 — Claude が応答中でも開ける。ステータスアイコンを表示。`f` で問題を自動修正（v2.1.116 で強化） |
+| `/doctor` | インストール状態を診断 — Claude が応答中でも開ける。バンドルスキルであり、Claude がセットアップを点検して修正を提案し、確認後に適用する（読み取り専用の診断は `claude doctor`） |
 | `/effort [low\|medium\|high\|xhigh\|max\|auto]` | 矢印キーのスライダーで思考量を設定。レベル: `low` → `medium` → `high` → `xhigh`（v2.1.111 で追加）→ `max`。Opus 4.7 のデフォルトは `xhigh`、`max` は Opus 4.7 が必要 |
 | `/exit` | REPL を終了（エイリアス: `/quit`） |
 | `/export [filename]` | 現在の会話をファイルまたはクリップボードにエクスポート |
 | `/extra-usage` | レート制限の追加使用量を設定 |
 | `/fast [on\|off]` | 高速モードを切り替え |
-| `/feedback` | フィードバックを送信（エイリアス: `/bug`） |
+| `/feedback` | フィードバックを送信 |
 | `/focus` | フォーカスビューを切り替え（v2.1.110 で追加。フォーカス切替は `Ctrl+O` から本コマンドへ移行） |
 | `/help` | ヘルプを表示 |
 | `/hooks` | フック設定を表示 |
@@ -56,13 +56,14 @@
 | `/install-github-app` | GitHub Actions アプリをセットアップ |
 | `/install-slack-app` | Slack アプリをインストール |
 | `/keybindings` | キーバインド設定を開く |
-| `/less-permission-prompts` | 直近の Bash／MCP ツール呼び出しを分析し、優先度の高い許可リストを `.claude/settings.json` に追加して権限プロンプトを減らす（v2.1.111 で追加） |
+| `/fewer-permission-prompts` | 直近の Bash／MCP ツール呼び出しを分析し、優先度の高い許可リストを `.claude/settings.json` に追加して権限プロンプトを減らす（v2.1.111 で追加） |
 | `/login` | Anthropic アカウントを切り替え |
 | `/logout` | Anthropic アカウントからサインアウト |
 | `/mcp` | MCP サーバーと OAuth を管理 |
 | `/memory` | `CLAUDE.md` を編集、自動メモリを切り替え |
 | `/mobile` | モバイルアプリの QR コード（エイリアス: `/ios`、`/android`） |
 | `/model [model]` | モデル選択。左右キーで思考量を変更 |
+| `/output-style [name]` | 出力スタイルの一覧表示と切り替え（v2.1.91 で削除された後、v2.1.269 で再追加）。引数なしで実行するとスタイルを一覧表示し、現在のものを示す。headless と Remote Control のセッションでも動作し、選択内容は `.claude/settings.local.json` に保存される |
 | `/passes` | Claude Code 無料 1 週間を共有 |
 | `/permissions` | 権限を表示／更新（エイリアス: `/allowed-tools`） |
 | `/plan [description]` | プランモードに入る |
@@ -72,13 +73,13 @@
 | `/privacy-settings` | プライバシー設定（Pro／Max のみ） |
 | `/release-notes` | 変更履歴を表示 |
 | `/recap` | セッションへ戻ってきた際にセッションのおさらい／要約を表示（v2.1.108 で追加） |
-| `/reload-plugins` | アクティブなプラグインをリロード |
+| `/reload-plugins` | アクティブなプラグインをリロード。v2.1.221 以降、ほとんどのインストールは即座に有効化されるため、インストール要約に `Run /reload-plugins to activate.` と表示された場合にのみ必要 |
 | `/remote-control` | claude.ai からのリモート制御（エイリアス: `/rc`） |
 | `/remote-env` | デフォルトのリモート環境を設定 |
 | `/rename [name]` | セッションをリネーム |
 | `/resume [session]` | 会話を再開（エイリアス: `/continue`） |
-| `/review` | **非推奨** — 代わりに `code-review` プラグインを導入する |
-| `/rewind` | 会話やコードを巻き戻す（エイリアス: `/checkpoint`） |
+| `/review [low\|medium\|high\|xhigh\|max\|ultra] [--fix] [--comment] [pr#\|branch\|path]` | `/code-review` のエイリアス（v2.1.223）。現在の diff、または渡した PR 番号・ブランチ・パスをレビューする（例: `/review 1234`）。同じ effort レベルとフラグを受け付ける。レベルを省略すると、直前に入力した `low`〜`max` のレベルを再利用する |
+| `/rewind` | 会話やコードを巻き戻す（エイリアス: `/checkpoint`、`/undo`） |
 | `/sandbox` | サンドボックスモードを切り替え |
 | `/schedule [description]` | クラウドのスケジュールタスクを作成／管理 |
 | `/security-review` | ブランチをセキュリティ脆弱性の観点で分析 |
@@ -88,13 +89,11 @@
 | `/status` | バージョン、モデル、アカウントを表示 |
 | `/statusline` | ステータスラインを設定 |
 | `/tasks` | バックグラウンドタスクを一覧／管理 |
-| `/team-onboarding` | プロジェクトの Claude Code 設定からチームメイト向けランプアップガイドを生成（v2.1.101 で新規） |
+| `/team-onboarding` | 過去 30 日間の Claude Code のセッション、コマンド、MCP 利用状況からチームメイト向けランプアップガイドを生成し、共有リンクを返す（v2.1.101 で新規） |
 | `/terminal-setup` | ターミナルのキーバインドを設定 |
 | `/theme` | テーマピッカーを開く／カスタムテーマを管理（v2.1.118）。カスタムテーマは `~/.claude/themes/<name>.json` に JSON で定義 |
-| `/tui` | ちらつきのないフルスクリーン TUI（テキストユーザーインターフェース）モードを切り替え（v2.1.110 で追加） |
-| `/ultraplan <prompt>` | ultraplan セッションでプランを下書きし、ブラウザでレビュー |
-| `/ultrareview` | マルチエージェント分析による包括的なクラウドベースのコードレビュー（v2.1.111 で追加） |
-| `/undo` | `/rewind` のエイリアス（v2.1.108 で追加） |
+| `/tui [default\|fullscreen]` | ターミナル UI のレンダラーを設定して再起動する（`fullscreen` でちらつきのない描画）。引数なしの `/tui` は現在のレンダラーを表示（v2.1.110 で追加） |
+| `/ultrareview` | マルチエージェント分析による包括的なクラウドベースのコードレビュー（v2.1.111 で追加）。現在の推奨呼び出しは `/code-review ultra` で、`/ultrareview` はそのエイリアスとして残っている。Pro と Max では 3 回まで無料、以降は使用クレジットが必要 |
 | `/upgrade` | 上位プランへのアップグレードページを開く |
 | `/usage` | 正式な使用状況ダッシュボード（v2.1.118）— プラン使用量制限、レート制限、コスト、日次セッション統計を統合。`/cost` と `/stats` は特定のタブを開くタイピング用エイリアス |
 | `/voice` | プッシュトゥトーク音声入力を切り替え |
@@ -108,15 +107,13 @@
 | `/batch <instruction>` | ワークツリーを使った大規模並列変更をオーケストレートする |
 | `/claude-api` | プロジェクトの言語に応じた Claude API リファレンスを読み込む |
 | `/debug [description]` | デバッグログを有効化 |
-| `/loop [interval] <prompt>` | プロンプトを定期的に繰り返し実行 |
+| `/loop [interval] [prompt]` | プロンプトを定期的に繰り返し実行 |
 | `/simplify [focus]` | 変更されたファイルをコード品質の観点でレビュー |
 
 ### 非推奨コマンド
 
 | コマンド | ステータス |
 |---------|----------|
-| `/review` | 非推奨 — `code-review` プラグインに置き換え |
-| `/output-style` | v2.1.73 から非推奨 |
 | `/fork` | `/branch` に改名（エイリアスは引き続き有効、v2.1.77） |
 | `/pr-comments` | v2.1.91 で削除 — Claude に直接 PR コメントを見るよう依頼する |
 | `/vim` | v2.1.92 で削除 — /config → エディタモードを使う |
@@ -124,15 +121,15 @@
 ### 直近の変更点
 
 - `/fork` を `/branch` に改名し、`/fork` はエイリアスとして残置（v2.1.77）
-- `/output-style` を非推奨化（v2.1.73）
-- `/review` を非推奨化、`code-review` プラグインを推奨
+- `/output-style` は削除（v2.1.91）された後、**v2.1.269 で再追加**され、v2.1.278 では再び利用可能なコマンドである。headless と Remote Control のセッションでも動作する。出力スタイル自体は `/config` または `outputStyle` 設定でも引き続き利用できる
+- `/review` が `/code-review` の完全なエイリアスになった — ターゲット、effort レベル、フラグはすべて同じ（v2.1.223）。履歴: v2.1.186 でまず `/code-review medium` エンジンに移行したが、当時は PR 専用だった
 - `/effort` コマンドを追加。`max` レベルは Opus 4.7 が必要（当初は Opus 4.6 限定）
 - プッシュトゥトーク音声入力の `/voice` コマンドを追加
 - スケジュールタスクの作成／管理用の `/schedule` コマンドを追加
 - プロンプトバーをカスタマイズする `/color` コマンドを追加
 - /pr-comments を v2.1.91 で削除 — Claude に直接 PR コメントを見るよう依頼する
 - /vim を v2.1.92 で削除 — /config → エディタモードを使う
-- ブラウザベースのプランレビューと実行を行う /ultraplan を追加
+- `/ultraplan` は v2.1.222 で削除された — 代わりにプランモードを使う
 - インタラクティブな機能レッスン用に /powerup を追加
 - サンドボックスモード切替用に /sandbox を追加
 - `/model` ピッカーが、生のモデル ID ではなく可読ラベル（例: "Sonnet 4.6"）を表示するようになった
@@ -142,18 +139,18 @@
 - ちらつきのないフルスクリーン TUI 描画用に `/tui` コマンドを追加（v2.1.110）
 - フォーカスビュー切替用に `/focus` コマンドを追加。`Ctrl+O` は詳細トランスクリプトの切替のみに（v2.1.110）
 - セッションコンテキストのおさらいを手動で発火する `/recap` コマンドを追加（v2.1.108）
-- `/undo` を `/rewind` のエイリアスとして追加（v2.1.108）
+- `/undo` を `/rewind` のエイリアスとして追加（v2.1.108）。現在も `/checkpoint` と並ぶ `/rewind` のエイリアスである
 - `/proactive` を `/loop` のエイリアスとして追加（v2.1.105）
 - `/effort` がインタラクティブな矢印キースライダーを獲得し、`high` と `max` の間に新しい `xhigh` レベルを追加。Opus 4.7 プランではデフォルト思考量が `xhigh` に引き上げられた（v2.1.111）
-- 包括的なクラウドベースのマルチエージェントコードレビュー用に `/ultrareview` を追加（v2.1.111）
-- Bash／MCP ツール呼び出しを分析し、`.claude/settings.json` の許可リストで権限プロンプトを減らす `/less-permission-prompts` を追加（v2.1.111）
+- 包括的なクラウドベースのマルチエージェントコードレビュー用に `/ultrareview` を追加（v2.1.111）。v2.1.223 で `/code-review ultra` が推奨の呼び出しとなり、`/ultrareview` はエイリアスとして残った
+- Bash／MCP ツール呼び出しを分析し、`.claude/settings.json` の許可リストで権限プロンプトを減らす `/fewer-permission-prompts` を追加（v2.1.111）
 - Opus 4.7 を利用する Max サブスクライバについて、Auto モードに `--enable-auto-mode` フラグが不要になった（v2.1.112）
 
 ### `/team-onboarding` — チームメイト向けランプアップガイド
 
 > **v2.1.101 で新規追加**
 
-`/team-onboarding` を使うと、プロジェクトのローカルな Claude Code 利用状況からチームメイト向けランプアップガイドを生成できる。コマンドは `CLAUDE.md`、インストール済みのスキル、サブエージェント、フック、最近のワークフローを点検し、新しい開発者がすぐに生産的になれるオンボーディングドキュメントを作成する。
+`/team-onboarding` を使うと、プロジェクトのローカルな Claude Code 利用状況からチームメイト向けランプアップガイドを生成できる。Claude は過去 30 日間のセッション、コマンド、MCP サーバーの利用状況を分析し、新しい開発者がすぐに生産的になれるオンボーディングガイドを作成して、その共有リンクを返す。
 
 組み込みコマンドであり、インストール作業は不要である。
 
@@ -163,13 +160,11 @@
 claude /team-onboarding
 ```
 
-生成されるガイドは次の内容を要約する:
+生成されるガイドは次の情報をもとに作られる:
 
-- [`CLAUDE.md`](../02-memory/README.md) からのプロジェクトの目的と主な慣習
-- 利用可能な [スキル](../03-skills/README.md) と自動起動の条件
-- 設定済みの [サブエージェント](../04-subagents/README.md) とその責務
-- 一般的なイベントで実行される [フック](../06-hooks/README.md)
-- 新規参加者が知っておくべき共通ワークフロー
+- 最近のセッションで繰り返し現れるワークフロー
+- よく実行するコマンド
+- 利用している [MCP サーバー](../05-mcp/README.md)
 
 **提供開始:** Claude Code v2.1.101（2026 年 4 月 11 日）に同梱。
 
@@ -238,7 +233,7 @@ Instructions for Claude to follow when this command is invoked.
 | フィールド | 用途 | デフォルト |
 |----------|------|----------|
 | `name` | コマンド名（`/name` になる） | ディレクトリ名 |
-| `description` | 簡単な説明（Claude がいつ使うか判断する材料） | 最初の段落 |
+| `description` | 簡単な説明（Claude がいつ使うか判断する材料） | 最初の空でない行 |
 | `argument-hint` | 自動補完用の想定引数 | なし |
 | `allowed-tools` | 権限なしで使えるツール | 継承 |
 | `model` | 使用する特定のモデル | 継承 |
@@ -246,7 +241,7 @@ Instructions for Claude to follow when this command is invoked.
 | `user-invocable` | `false` なら `/` メニューから隠す | `true` |
 | `context` | `fork` に設定すると隔離サブエージェントで実行 | なし |
 | `agent` | `context: fork` 利用時のエージェント種別 | `general-purpose` |
-| `hooks` | スキルスコープのフック（PreToolUse、PostToolUse、Stop） | なし |
+| `hooks` | スキル実行時に登録されるフック（任意のフックイベント。登録後はセッションの残りの間ずっと有効） | なし |
 
 ### 引数
 
@@ -280,7 +275,9 @@ Review PR #$0 with priority $1
 
 ### シェルコマンドによる動的コンテキスト
 
-プロンプトの前に `!`command`` で bash コマンドを実行する:
+プロンプトの前に `` !`command` `` で bash コマンドを実行する:
+
+> **注記（v2.1.299）**: `UserPromptSubmit` フックはコマンドが展開される前に実行されるため、プロンプトをブロックするフックはこれらの `!` コマンドの実行も止める。
 
 ```yaml
 ---
@@ -348,6 +345,8 @@ MCP サーバーはプロンプトをスラッシュコマンドとして公開�
 - `mcp__github` — GitHub MCP サーバー全体にアクセス
 - `mcp__github__*` — すべてのツールにワイルドカードアクセス
 - `mcp__github__get_issue` — 特定のツールにアクセス
+
+> **v2.1.299+:** ルールは名前を指定したサーバーにのみ適用される — `mcp__github` は `github__x` や `github_` という名前のサーバーにはもう一致しない。正規化後の名前に `__` を含むサーバーには `mcp__<正規化後の名前全体>__*` と書く（サブエージェントの `tools:` リストも同様）。
 
 ## コマンドアーキテクチャ
 
@@ -605,14 +604,23 @@ Deploy the application to production:
 
 ---
 
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
+**最終更新**: 2026 年 10 月 18 日
+**Claude Code バージョン**: 2.1.302
 **Sources**:
-- https://code.claude.com/docs/en/slash-commands
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/output-styles
 - https://code.claude.com/docs/en/interactive-mode
 - https://code.claude.com/docs/en/changelog
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.118
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.116
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.281
+- https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents
+- https://code.claude.com/docs/en/permissions#mcp
+- https://code.claude.com/docs/en/changelog#2-1-299
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/fullscreen
+- https://code.claude.com/docs/en/model-config
+- https://code.claude.com/docs/en/skills
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
 
 *[Claude How To](../) ガイドシリーズの一部*

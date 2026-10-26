@@ -19,7 +19,7 @@ tags: plugins, devops, automation
 ## 安装
 
 ```bash
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ## 包含内容
@@ -81,7 +81,7 @@ tags: plugins, devops, automation
 
 ## 要求
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - Kubernetes CLI（kubectl）
 - 已配置集群访问
 
@@ -112,3 +112,11 @@ Claude:
 🚀 Pods：3/3 已就绪
 ⏱️  用时：2m 34s
 ```
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

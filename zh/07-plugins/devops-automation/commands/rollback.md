@@ -1,5 +1,4 @@
 ---
-name: Rollback
 description: 回滚到上一次部署
 ---
 
@@ -12,3 +11,11 @@ description: 回滚到上一次部署
 3. 执行回滚流程
 4. 运行健康检查
 5. 通知团队
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

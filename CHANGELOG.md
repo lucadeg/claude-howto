@@ -1,5 +1,847 @@
 # Changelog
 
+## [v2.1.245] — 2026-08-25
+
+### Documentation sync against Claude Code v2.1.245
+
+Claude Code moved from v2.1.235 (2026-08-19) to **v2.1.245** (2026-08-25) — ten
+releases. This entry records that sync.
+
+> **Note**: This changelog has no entries for the v2.1.233 and v2.1.235 syncs
+> (commits `deb7e5c` and `da6e09e`), which landed in the repository without a
+> changelog entry. That gap is recorded here rather than back-filled with
+> reconstructed dates.
+
+### Fixed
+
+- **Version-currency claims were stale and mutually contradictory** — the root
+  `README.md` said `v2.1.235` in one place and `v2.1.220 (July 2026)` in
+  another, and this changelog's top entry still called v2.1.220 the current
+  Claude Code release. All now say v2.1.245.
+- **Hook default timeout** corrected from 60 seconds to **600** for
+  `command`, `http`, and `mcp_tool` (30 for `prompt`, 60 for `agent`), with the
+  per-event overrides documented.
+- **Skill precedence** corrected to **enterprise > personal > project**; the
+  lesson had project and personal swapped, contradicting its own quiz.
+- **Memory files are concatenated, not overridden** — the last two
+  "overrides root CLAUDE.md" strings in `02-memory/README.md` were replaced.
+- **`SECURITY.md`** no longer advertises support for "1.x releases".
+- **`STYLE_GUIDE.md`** no longer teaches a stale footer by example.
+- Graded material (the `lesson-quiz` and `self-assessment` skills) was realigned
+  with the lessons it grades: 31 hook events, five hook types, six rewind
+  options, six permission modes, import depth 4.
+
+### Added
+
+- **WebSocket (`ws`) MCP transport** — a fourth transport, configured through
+  `.mcp.json` or `claude mcp add-json`.
+- **`Concise` output style** — a fifth built-in (v2.1.237).
+- **New settings keys** — `modelPicker`, `promptCacheTtl`,
+  `subagentPromptCacheTtl`, `modelPricing`, `keybindingFlavor`.
+- **`ANTHROPIC_DEFAULT_MODEL`** env var (v2.1.236).
+- **`/design`** — the design-canvas research preview.
+- **`notify_when_idle`** on cross-session `SendMessage` (v2.1.236).
+- **Plugin manifest fields** — `workflows`, `channels`, `dependencies`, and
+  related CLI additions.
+
+### Changed
+
+- **Remote Control** left research preview; machines running
+  `claude remote-control` now appear as device cards in the Claude app.
+- **`Ctrl+L`** repaints the screen rather than clearing it (v2.1.238).
+- **Plugin `commands/`** is marked legacy; `skills/` is the current guidance.
+
+## [v2.1.220-r2] — 2026-08-04
+
+### Accuracy pass against Claude Code v2.1.220 (no upstream version change)
+
+v2.1.220 (2026-07-25) is still the current Claude Code release, so this entry
+records **internal corrections**, not a version sync. An audit against the
+official docs found no missing upstream features — every v2.1.218–v2.1.220
+capability was already documented. What it did find was broken example code,
+counts and names that disagreed between files, and metadata drift.
+
+### Fixed
+
+- **`06-hooks/pre-commit.sh` never actually blocked a commit** — the script
+  printed "Commit blocked." and then `exit 1` at four places. Per this repo's own
+  exit-code table (`06-hooks/README.md`), exit 1 is a *non-blocking* error, so the
+  commit proceeded anyway; only exit 2 blocks. All four now `exit 2` and write the
+  reason to stderr, which is where Claude Code reads the block reason from.
+- **`06-hooks/dependency-check.sh` never ran** — it read its target from `$1`, but
+  hooks receive JSON on stdin, so the path was always empty and the script exited
+  immediately. Now parses `file_path` from stdin, matching `format-code.sh`.
+- **Nested-subagent depth said 5 in `claude_concepts_guide.md`** — stated "up to 5
+  levels deep as of v2.1.172", contradicting the depth-3 default (v2.1.219) already
+  documented in four other files. Rewritten to lead with current behavior plus the
+  same three-era history note used in `04-subagents/README.md`.
+- **Hook event count was 29 in five files** — `README.md`, `CATALOG.md`,
+  `QUICK_REFERENCE.md` (×4), `INDEX.md` and `resources.md` all said 29; the correct
+  figure is **31**, confirmed name-by-name against the official hook list. The
+  previous sync fixed two files and missed the rest. `README.md`'s event list also
+  enumerated only 25 names and `INDEX.md`'s only 29 — both now list all 31.
+- **`/less-permission-prompts` is not a real command** — the built-in is
+  `/fewer-permission-prompts`. `CATALOG.md` had used *both* names in one file.
+- **`/fork` and `/subtask` were documented with swapped meanings** — they exchanged
+  roles in v2.1.212. `/fork` now copies the conversation into a new independent
+  background session; the forked-subagent behavior moved to `/subtask`, which was
+  absent from the repo entirely. Corrected and added in four files.
+- **`08-checkpoints/README.md` claimed `cleanupPeriodDays` was the only checkpoint
+  setting** — `fileCheckpointingEnabled` (default `true`) also exists, along with
+  `CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING` and a 100-checkpoint retention cap. The
+  repo's own `config-examples.json` already used the key it denied existed.
+- **`03-skills/refactor/SKILL.md` declared `name: code-refactor`** while living in
+  `refactor/` — the same defect fixed for `doc-generator` last sync. Renamed in the
+  English copy and mirrored to `ja/`, `zh/`, `uk/`, `vi/`.
+- **`03-skills/README.md` stated skill precedence two contradictory ways** —
+  "enterprise > personal > project" in one place, "project wins by default" in
+  another. Now consistently **enterprise > project > personal**.
+- **`claude-md` skill described AGENTS.md incorrectly** — called it an
+  agent-definition format. It is a cross-tool project-context file, and Claude Code
+  **does not read it directly**; it must be imported via `@AGENTS.md` or symlinked.
+- **`02-memory/directory-api-CLAUDE.md` claimed it "overrides" root CLAUDE.md** —
+  memory files are concatenated, never overridden.
+- **`INDEX.md` described `auto` and `dontAsk` backwards** — `dontAsk` was written up
+  as permissive ("accept all except risky") when it is the most restrictive mode:
+  it auto-denies anything not pre-approved. Corrected to the official definitions.
+- **`permissions.mode` is not a settings key** — four config samples in
+  `09-advanced-features/README.md` and `claude_concepts_guide.md` used it (with the
+  superseded value `default`). All now use `permissions.defaultMode: "manual"`.
+- **`09-advanced-features/config-examples.json` had no Opus 5** — still used
+  `claude-opus-4-8` for its three "most capable" profiles despite Opus 5 being the
+  default Opus since v2.1.219.
+- **`05-mcp/database-mcp.json` hardcoded a credential** —
+  `postgresql://user:pass@localhost/mydb`, contradicting the module's own "don't
+  hardcode credentials" rule. Now `${DATABASE_URL}`.
+- **`05-mcp/README.md` documented MCP scopes but never the `--scope` flag** —
+  readers had no way to actually select a scope. Added with examples.
+- **`/output-style` was listed as deprecated** — it was *removed* in v2.1.91.
+  Output styles remain available via `/config` or the `outputStyle` setting.
+- **Hook `permissionDecision` was missing `defer`** — the accepted values are
+  `allow`, `deny`, `ask`, `defer`, with precedence `deny` > `defer` > `ask` > `allow`.
+- **Context-tracker hooks assumed a 128k window** — no current Claude model has one.
+  Default raised to 1M, with Haiku 4.5's 200k noted.
+- **Local memory path was wrong in `claude_concepts_guide.md`** —
+  `.claude/local/CLAUDE.md` corrected to `./CLAUDE.local.md`.
+- **Broken fence in `03-skills/doc-generator/SKILL.md`** — the outer ```` ```markdown ````
+  block closed early and left a stray unclosed fence, so half the example rendered
+  as live markdown. Now uses a four-backtick outer fence. Neither validator caught
+  this, because `check_markdown_rendering.py` only scans README files.
+- **Three command templates had invalid skill names** — `Documentation Refactor`,
+  `Setup CI/CD Pipeline` and `Expand Unit Tests` are not valid `name:` values
+  (lowercase/hyphens only), so they would fail if copied into `.claude/skills/` as
+  the README instructs. Also removed a non-standard `tags:` field.
+- **Nine plugin agents used lowercase tool names** (`read, grep, bash`) while the
+  `04-subagents/` templates used canonical `Read, Grep, Bash`. Unified.
+- **"Claude Code 1.0+" requirement in five files** — raised to 2.1+.
+- **Miscounted inventories** — `CATALOG.md`'s summary table did not add up *and*
+  three of its Examples counts were wrong (Subagents 11→9, MCP 8→4, Hooks 8→11);
+  `INDEX.md` understated Plugins (27→39), Skills (21→23), Hooks (9→12), Subagents
+  (9→10) and Advanced (3→4), omitted three hook scripts and
+  `setup-auto-mode-permissions.py`, and mislabeled three hook events. All recounted
+  from the file tree.
+- **`CONTRIBUTING.md` said "all four checks"** — there are five.
+- **Two subagent templates were undocumented** — `clean-code-reviewer.md` and
+  `performance-optimizer.md` existed on disk but appeared in neither the example
+  list nor the file tree of `04-subagents/README.md`.
+- **`resources.md` Mermaid diagrams used an off-guide palette** — remapped to the
+  five `STYLE_GUIDE.md` colors with the required `stroke`/`color`.
+- **Metadata footers** — 61 files had a legacy `Last Updated`-only footer or none at
+  all; all now carry the full block. Four module READMEs were missing the
+  `Compatible Models` line, and `02-memory/README.md` was stranded at v2.1.217 with
+  an ISO-formatted date. All 87 in-scope markdown files now report **2.1.220**.
+- **Smaller fixes** — explicit `exit 0` in `session-end.sh`; `# Hook: Event:Matcher`
+  shorthand (not real syntax) reworded in four scripts; `"type": "stdio"` added to
+  the four MCP example configs; a worked example that reported 42 PRs in one place
+  and 47 in another.
+
+## [v2.1.220] — 2026-07-29
+
+### Synced to Claude Code v2.1.220
+
+Bumps tutorial coverage from the v2.1.217 baseline (2026-07-22 sync) to
+v2.1.220 — three contiguous releases (v2.1.218, v2.1.219, v2.1.220), no gaps.
+v2.1.219 drives most of this sync: it added Claude Opus 5 and reversed the
+nested-subagent default that the previous sync had just documented.
+
+### Fixed
+
+- **Nested-subagent default reversed again (v2.1.219)** — five locations across
+  `04-subagents/README.md`, `CATALOG.md`, `10-cli/README.md`, and
+  `QUICK_REFERENCE.md` stated that nested spawning is disabled by default. That
+  was correct for v2.1.217–v2.1.218 only. v2.1.219 sets the default to **depth
+  3**; `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1` now *disables* nesting rather
+  than enabling it. All five now lead with current behavior and carry an
+  identical three-era history note (v2.1.172–v2.1.216 nested by default up to 5
+  layers with no way to change it; v2.1.217 made nesting opt-in at depth 1;
+  v2.1.219 set the default to 3) so the next reversal degrades gracefully.
+- **Opus 4.8 named as the default Opus model** — `10-cli/README.md` stated
+  "Opus 4.8 remains the default on Max, Team Premium, Enterprise pay-as-you-go,
+  and the Claude API". As of v2.1.219 that is **Claude Opus 5**
+  (`claude-opus-5`, 1M context, default effort `high`), which was absent from
+  every model table in the repo. Added to the `10-cli` and
+  `claude_concepts_guide.md` model tables and to all 18 `Compatible Models`
+  footers, plus ~20 effort-level enumerations. Microsoft Foundry still resolves
+  the `opus` alias to Opus 4.6.
+- **Fast-mode model list** — `/fast` now applies to **Opus 5 and Opus 4.8**;
+  Opus 4.7 was removed (v2.1.219). Also corrected a present-tense instruction
+  for enabling fast mode on Opus 4.6 in `10-cli/README.md`.
+- **Auto-mode eligibility self-contradiction** — `09-advanced-features/README.md`
+  said both "available on all plans" and "Team, Enterprise, or API" /
+  "Anthropic API only". Rewritten to the four documented requirements
+  (Plan / Organization / Model / Provider). Auto mode is available on **all
+  plans**, default-on for Team/Enterprise with an administrator opt-*out* via
+  `permissions.disableAutoMode` — the file previously described an Owner
+  opt-*in*.
+- **Stale auto-mode opt-in instruction** — `CATALOG.md` still told users to set
+  `CLAUDE_CODE_ENABLE_AUTO_MODE=1` on third-party providers. That requirement
+  was removed in v2.1.207; the variable is accepted for compatibility but has
+  no effect.
+- **Hook-event count disagreement** — `LEARNING-ROADMAP.md` and
+  `claude_concepts_guide.md` said 29 while `06-hooks/README.md` said 30 (now
+  31). Aligned both to 31. `claude_concepts_guide.md`'s named event table was
+  also missing `MessageDisplay` (a pre-existing gap from v2.1.152) alongside
+  the new `DirectoryAdded`; its event list is now identical to `06-hooks`.
+- **`doc-generator` skill name mismatch** — `03-skills/doc-generator/SKILL.md`
+  declared `name: api-documentation-generator` while living in `doc-generator/`,
+  contradicting every catalog and index entry. Renamed in the English copy and
+  mirrored to `ja/`, `zh/`, `uk/`.
+- **Stale "New Features (May 2026)" headings** — retitled in `CATALOG.md` and
+  `resources.md` to date-free headings that cannot go stale again, with the
+  `CATALOG.md` navigation anchor updated to match.
+- **Legacy `docs.anthropic.com` links** — the three remaining footer links in
+  `01-slash-commands/README.md`, `05-mcp/README.md`, and `10-cli/README.md`
+  migrated to `code.claude.com`.
+- **Skill example shadowing a built-in** — `03-skills/README.md` used
+  `name: deep-research` as a custom-skill example, which now shadows the
+  built-in `/deep-research`. Renamed to `topic-research` and mirrored to
+  `vi/`, `ja/`, `uk/`.
+
+### Added
+
+- **`DirectoryAdded` hook (v2.1.219)** — fires after `/add-dir` or the SDK
+  `register_repo_root` control request registers a new working directory
+  mid-session. Added to the `06-hooks/README.md` events table (count 30 → 31).
+- **`/deep-research` is explicit-invocation only (v2.1.218)** — Claude no
+  longer launches it on its own. Added to the bundled-skills table.
+- **`/code-review` runs as a background subagent (v2.1.218)** — review work no
+  longer fills the conversation, and stacked slash commands remain its review
+  target. Documented in `03-skills/README.md` and `CATALOG.md`.
+- **Fork skills run in the background by default (v2.1.218)** — skills with
+  `context: fork` default to `background: true`; set `false` to opt out. Added
+  a `background` frontmatter row, a matching YAML sample line, and an explicit
+  statement of the default so it doesn't read as contradicting
+  `04-subagents`, where `background: true` *forces* background.
+- **Agent frontmatter hooks require workspace trust (v2.1.218)** — hooks in a
+  project subagent run only after the folder the agent file came from has
+  accepted workspace trust.
+- **Dynamic workflow size guideline (v2.1.219)** — workflows now default to a
+  medium guideline (aim for fewer than 15 agents), selectable via **Dynamic
+  workflow size** in `/config` or the new `workflowSizeGuideline` settings key.
+- **`sandbox.network.strictAllowlist` (v2.1.219)** — denies non-allowlisted
+  hosts for sandboxed commands without prompting.
+- **MCP error surfacing (v2.1.219)** — `claude mcp list` and `/mcp` now report
+  HTTP status and error text on connection failure; hidden leading/trailing
+  whitespace in config values is warned about; headless runs expose
+  `mcp_server_errors` in the stream-json init event. Added as troubleshooting
+  guidance in `05-mcp/README.md`.
+- **Nested subagent forwarding in stream-json (v2.1.219)** — subagents at depth
+  2+ now appear when `--forward-subagent-text` is set, keyed by their spawning
+  `Agent` `tool_use` id.
+- **Frontmatter booleans accept more values (v2.1.218)** — `yes`/`no`,
+  `on`/`off`, `1`/`0`, case-insensitive, alongside `true`/`false`.
+- **Agent names reject `:` (v2.1.218)** — reserved for plugin namespacing.
+- **Auto and plan mode defer more to the classifier (v2.1.218)** — `rm -rf /`
+  and `rm -rf ~` (including inside command/process substitution) are now
+  adjudicated by the classifier rather than opening a permission dialog, and
+  plan mode with auto no longer prompts for Bash commands the static analyzer
+  can't prove read-only (`useAutoModeDuringPlan`, on by default).
+- **Opus 5 safety-classifier fallback (v2.1.219)** — cybersecurity-flagged
+  requests re-run on Opus 4.8; biology-flagged requests end in a refusal, since
+  Opus 5 runs its own biology classifiers with no fallback. Relevant to readers
+  using this repo's security-review subagent and plugin templates, as
+  pentest/CTF workloads trigger it frequently.
+
+## [v2.1.217] — 2026-07-22
+
+### Synced to Claude Code v2.1.217
+
+Bumps tutorial coverage from the v2.1.212 baseline (2026-07-18 sync) to
+v2.1.217 (v2.1.213 was skipped upstream — the changelog and GitHub releases
+both jump 2.1.212 → 2.1.214), plus a repo-internal accuracy audit.
+
+### Fixed
+
+- **Nested-subagent-spawning claim reversed (v2.1.217)** — `04-subagents/README.md`
+  and `CATALOG.md` stated as current behavior that "subagents can spawn their
+  own subagents, nested up to 5 levels deep" (true v2.1.172–v2.1.216). As of
+  v2.1.217 this is off by default; opt in with
+  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`. Both files now lead with current
+  behavior and keep the historical note.
+- **Stale `--enable-auto-mode` flag** — removed in v2.1.111 (auto mode moved
+  into the default `Shift+Tab` cycle; `--permission-mode auto` is the current
+  way to start in it), but `10-cli/README.md` still presented it as a live
+  flag in four spots and `QUICK_REFERENCE.md` used it in three. All seven
+  updated to `--permission-mode auto`.
+- **Import-depth contradiction ("5 levels" vs "4 hops")** — two "5 levels"
+  instances survived in `02-memory/README.md`'s Best Practices area after the
+  2026-07-18 sync fixed two others; both now read "4 hops," matching the rest
+  of the file.
+- **Sonnet-5-less models table** — `claude_concepts_guide.md`'s "Models &
+  Reasoning Effort" table omitted Claude Sonnet 5 despite the file's own
+  footer already listing it as compatible. Added as the default row for
+  Pro/Team Standard/Enterprise.
+- **`config-examples.json` fabricated schema** — all 11 example configs used
+  invented fields (`mode: "unrestricted"/"confirm"`, `planning.*`,
+  `extendedThinking.*`, `headless.*`, `checkpoints.autoCheckpoint`) that don't
+  exist in the real settings schema, plus a stale `claude-opus-4-7` model ID.
+  Rewritten to use real `settings.json` keys (`permissions.defaultMode`,
+  `permissions.allow`/`deny`, `env`, `hooks`, `fileCheckpointingEnabled`,
+  `sandbox.*`) and current model IDs.
+- **`brand-voice` skill vs. its README example** — the actual
+  `03-skills/brand-voice/SKILL.md` (`name: brand-voice-consistency`,
+  user-invocable) contradicted `03-skills/README.md`'s "Example 4" walkthrough
+  (`name: brand-voice`, `user-invocable: false`). Aligned the skill file to
+  the README's background-knowledge framing.
+- **CLAUDE.md length guidance conflict** — `03-skills/claude-md/SKILL.md`
+  ("<300 lines, ideally <100") vs. `02-memory/README.md` ("<500 lines").
+  Unified on "keep it under a few hundred lines; shorter is better" in both
+  files (no official specific limit exists — both prior numbers were
+  editorial).
+
+### Added
+
+- **New subagent caps (v2.1.217)** — a cap on concurrently running subagents
+  (default 20, `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`) alongside the nesting
+  depth control above. Documented in `04-subagents/README.md`,
+  `10-cli/README.md`, and `QUICK_REFERENCE.md`.
+- **`--max-budget-usd` now halts background subagents (v2.1.217)** — the spend
+  cap previously only blocked new spawns; it now also halts already-running
+  background subagents. Documented in `10-cli/README.md`.
+- **Hook `if:` glob scope narrowed (v2.1.214)** — single-segment `dir/**` hook
+  `if:` conditions now match only `<cwd>/dir` (use `**/dir/**` for any-depth);
+  deny/ask permission rules are unaffected. Documented in `06-hooks/README.md`.
+- **SessionStart `"fork"` source (v2.1.214)** — forked sessions now report
+  source `"fork"` instead of `"resume"`. Documented in `06-hooks/README.md`.
+- **`sandbox.filesystem.disabled` (v2.1.216)** — skips filesystem isolation
+  while keeping network egress control enforced. Documented in
+  `09-advanced-features/README.md` and `10-cli/README.md`.
+- **`/rewind` symlink/hard-link protection (v2.1.216)** — no longer restores
+  or deletes files through symlinks or hard links at tracked paths; reports
+  how many paths were skipped. Documented in `08-checkpoints/README.md`.
+- **Auto-memory `modified` timestamp + non-blocking `/memory` editor** — an
+  ISO `modified` timestamp on memory-file frontmatter (v2.1.214), and `/memory`
+  no longer blocking the session while its GUI editor is open (v2.1.216).
+  Documented in `02-memory/README.md`.
+- **CLI/settings batch (v2.1.214–v2.1.217)** — `emojiCompletionEnabled`,
+  `FORCE_HYPERLINK=0`, `CLAUDE_CODE_OTEL_CONTENT_MAX_LENGTH`, `--settings`
+  files capped at 2 MiB, and permission hardening (Docker/Podman
+  daemon-redirect flags, `file -m`/`--magic-file`/`-f`/`--files-from`,
+  10,000+ character commands) documented in `10-cli/README.md`. `/context`'s
+  over-context-window warning and `/compact` failures now displaying as
+  errors (v2.1.216) documented in `01-slash-commands/README.md`.
+- **`/verify` and `/code-review` explicit-invocation-only (v2.1.215)** —
+  additive note in `03-skills/README.md` and `QUICK_REFERENCE.md`; the repo
+  never claimed auto-invocation.
+
+### Notes
+
+- `QUICK_REFERENCE.md`'s `--enable-auto-mode` / `--permission-mode auto`
+  inconsistency was resolved in favor of the latter after confirming against
+  the live CLI reference that the former was removed in v2.1.111.
+- Translation mirrors (`vi`/`ja`/`zh`/`uk`) were checked for the P0/P1 claims
+  above; most translated `04-subagents/README.md` and `CATALOG.md` copies
+  either predate the nested-spawning feature or don't carry the affected
+  section, so no mirrored edit was needed there. `10-cli/README.md`'s
+  `--max-budget-usd` clarifier was mirrored into all four languages.
+
+## [v2.1.212] — 2026-07-18
+
+### Synced to Claude Code v2.1.212
+
+Bumps tutorial coverage from the v2.1.206 baseline (2026-07-11 sync) to
+v2.1.212, plus a repo-internal accuracy audit that surfaced defects
+independent of the version delta.
+
+### Fixed
+
+- **Dead `#` memory-shortcut removed** — `02-memory/README.md` documented a
+  `#`-prefix quick-memory-add pattern in two places ("Method 3" and an
+  "Example 4" walkthrough) as a working feature, directly contradicting the
+  file's own commands table three lines from the top, which already marked
+  `#` **Discontinued**. Both sections were removed/rewritten to point at
+  `/memory` and conversational memory requests instead.
+- **Auto mode opt-in → opt-out on Bedrock/Vertex/Foundry (v2.1.207)** — auto
+  mode is now available by default on these providers (plus signed-in Claude
+  apps gateway sessions) for Sonnet 5, Opus 4.7/4.8, and Fable 5; the
+  `CLAUDE_CODE_ENABLE_AUTO_MODE` opt-in flag has no effect from v2.1.207
+  onward. Fixed in `09-advanced-features/README.md` and `10-cli/README.md`.
+- **`auto` permission mode mislabeled "Research Preview"** — current official
+  docs present `auto` as GA (available on all plans, gated only by model and
+  provider eligibility), not a preview feature. Corrected across
+  `09-advanced-features/README.md`, `CATALOG.md`, and `README.md`, which also
+  gained the missing `auto` row in its permission-mode summary.
+- **`/fork` / `/branch` history corrected** — the repo claimed "`/fork`
+  renamed to `/branch` in v2.1.77 (alias retained)." Current docs show these
+  are distinct, current commands: `/fork` spawns a background subagent that
+  inherits the conversation, `/branch` switches you into a copy in place.
+  They were a single aliased command only from v2.1.77 to v2.1.161. Fixed in
+  `01-slash-commands/README.md` and `09-advanced-features/README.md`.
+- **`effort` frontmatter enum completed** — `04-subagents/README.md` listed
+  4 levels (`low`/`medium`/`high`/`max`), missing `xhigh`, present in every
+  other file that documents this enum.
+- **Bundled-skills count reconciled** — `CATALOG.md`'s summary table said "9
+  bundled" against its own 10-row detail table; corrected to 10 (16 total).
+- **`INDEX.md` Feature Coverage Matrix fully recomputed** — header claimed "16
+  files," the Skills row claimed "28" for the same category; neither matched
+  the actual 21 files across the six documented skills. The Plugins row
+  similarly summed to 36 but showed 40. Every row was recounted by hand; the
+  Skills row now reads `5 | 9 | 7` (**21**) and the Plugins row now reads
+  `11 | 9 | 3 | 3 | 3 | 3 | 7` (**39**) — every row's Total now equals the sum
+  of its own cells.
+- **Stale `2.1.160` footer cluster bumped** — five files
+  (`08-checkpoints/checkpoint-examples.md`,
+  `09-advanced-features/planning-mode-examples.md`, and the three
+  `07-plugins/*/README.md` example-package files) still carried June 2026
+  footers with no version-specific content drift found; bumped to 2.1.212.
+- **`QUICK_REFERENCE.md` fully resynced** — was 52 versions behind at
+  `2.1.160`/June 2. Permission-mode block updated to `manual`
+  (formerly `default`), Compatible Models gained Sonnet 5, and the "New
+  Features (May 2026)" section was retitled and refreshed.
+- **`02-memory/README.md` Memory Hierarchy section rewritten** — replaced a
+  fabricated 8-tier strict-precedence model with the verified structure:
+  CLAUDE.md files and rules are concatenated into context (not selected by
+  override), and `managed-settings.d/` is a `settings.json` mechanism, not a
+  CLAUDE.md one. The Memory Architecture diagram was also corrected — it
+  previously conflated claude.ai's 24h synthesis cycle with Claude Code's
+  continuous auto memory.
+
+### Added
+
+- **Subagent output scanning (v2.1.210)** — Claude Code scans subagent
+  reports for prompt-injection patterns (fake system tags, fabricated
+  conversation turns, permission-bypass mentions) and neutralizes them.
+  Documented in a new subsection of `04-subagents/README.md`.
+- **Session-wide spawn caps (v2.1.212)** — default 200/session limits on
+  WebSearch calls (`CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION`) and subagent
+  spawns (`CLAUDE_CODE_MAX_SUBAGENTS_PER_SESSION`, reset by `/clear`).
+  Documented in `09-advanced-features/README.md`, `04-subagents/README.md`,
+  and `10-cli/README.md`.
+- **MCP long-running-tool auto-backgrounding (v2.1.212)** — MCP tool calls
+  over 2 minutes now auto-background instead of blocking the session;
+  configurable via `CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS`. Documented in
+  `05-mcp/README.md`.
+- **`claude auto-mode reset` and `/resume` picker (v2.1.212)** — a new CLI
+  subcommand restores default auto-mode config; bare `/resume` now opens a
+  picker of past sessions (including removed ones) and resumes as a
+  background session. Documented in `09-advanced-features/README.md`,
+  `01-slash-commands/README.md`, and `10-cli/README.md`.
+- **Screen reader mode (v2.1.208)** — opt-in plain-text rendering via
+  `--ax-screen-reader`, `CLAUDE_AX_SCREEN_READER=1`, or `"axScreenReader":
+  true`. Documented in `09-advanced-features/README.md` and
+  `10-cli/README.md`.
+- **Task tool `mode` parameter deprecation (v2.1.212)** — noted in
+  `04-subagents/README.md`: subagents now inherit the parent session's
+  permission mode by default; the Task tool's per-call `mode` parameter is
+  ignored.
+
+### Known gaps (deferred, not fixed this sync)
+
+- `03-skills/.claude/skills/blog-draft/` is gitignored local testing scratch
+  (`# Local skill testing` in `03-skills/.gitignore`), not a tracked
+  duplicate of `03-skills/blog-draft/` — confirmed no action needed.
+
+## [v2.1.160] — 2026-06-02
+
+### Synced to Claude Code v2.1.160
+
+Bumps tutorial coverage to the Claude Code v2.1.160 release. The intervening
+v2.1.156 sync (Claude Opus 4.8, #129) was applied to the docs but not separately
+changelogged; this entry continues from there and covers the v2.1.157–v2.1.160
+delta. No breaking changes shipped in this range — the additions are a handful
+of new CLI/feature surfaces plus the routine footer bump. Auto mode on
+third-party providers is **opt-in**, not a new default.
+
+### Added
+
+- **`claude plugin init <name>` (v2.1.157)** — scaffolds a new plugin directly
+  in `.claude/skills`; plugins placed there now auto-load with no marketplace
+  required. Documented in `10-cli/README.md`, `07-plugins/README.md`, and
+  `CATALOG.md`.
+- **Auto mode on Bedrock / Vertex / Foundry (v2.1.158)** — auto mode is now
+  available on the three third-party providers for Opus 4.7/4.8, **opt-in** via
+  the `CLAUDE_CODE_ENABLE_AUTO_MODE=1` environment variable. Documented in
+  `09-advanced-features/README.md`, `10-cli/README.md`, and `CATALOG.md`.
+- **`EnterWorktree` mid-session switching (v2.1.157)** — the `EnterWorktree`
+  tool can now switch between Claude-managed worktrees within a session, and
+  finished worktrees are left unlocked so `git worktree remove`/`prune` can
+  clean them up. Documented in `09-advanced-features/README.md`.
+
+### Behavior changes
+
+- **`acceptEdits` write-safety prompts (v2.1.160)** — even in `acceptEdits`
+  mode, Claude Code now prompts before writing shell-startup files (`.zshenv`,
+  `.zlogin`, `.bash_login`, `~/.config/git/`) and code-executing build configs
+  (`.npmrc`, `.yarnrc*`, `bunfig.toml`, `.bazelrc`, `.pre-commit-config.yaml`,
+  `.devcontainer/`), which could otherwise lead to unintended command
+  execution. Documented in `09-advanced-features/README.md`.
+- **Dynamic-workflow trigger keyword `workflow` → `ultracode` (v2.1.160)** — the
+  bare word "workflow" no longer triggers a dynamic-workflow run; the trigger
+  keyword is now `ultracode`. Noted in `09-advanced-features/README.md`.
+
+### Removed
+
+- **`CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE` is now a no-op (v2.1.160)** — the
+  environment variable was removed and now has no effect. The env-var table
+  wording in `10-cli/README.md` was updated from "removed 2026-06-01" to
+  "Removed (no-op as of v2.1.160)".
+
+### Documentation
+
+- Fixed three internally-inconsistent version strings in `README.md` (badge and
+  FAQ prose were stuck at `2.1.145` / `v2.1.150`) and normalized a stale Sources
+  link.
+- Bumped every English doc's metadata footer to **v2.1.160 / June 2, 2026** for
+  a consistent sync.
+
+## [v2.1.150] — 2026-05-25
+
+### Synced to Claude Code v2.1.150
+
+Bumps tutorial coverage from Claude Code v2.1.145 → v2.1.150 (May 23, 2026
+release). Anthropic shipped five patches (v2.1.146 through v2.1.150) since the
+last sync. The headline change is the **rename of the bundled `/simplify`
+skill to `/code-review`** (v2.1.146) — a pure rename with **no alias**, so the
+old name no longer works. Because this repo also ships its own local
+code-review skill, the directory was renamed to `code-review-specialist` to
+avoid shadowing the new built-in. Other highlights: `/usage` now breaks costs
+down per category, background sessions can be pinned with `Ctrl+T`, the
+markdown renderer supports GFM task-list checkboxes, and a new
+`allowAllClaudeAiMcps` managed setting was added. This sync also catches up
+four module READMEs (`04-subagents`, `05-mcp`, `07-plugins`,
+`09-advanced-features`) that were still pinned to v2.1.143.
+
+### Behavior changes
+
+- **`/simplify` renamed to `/code-review` (v2.1.146)**: the bundled review
+  skill is now invoked as `/code-review` and takes an optional effort level
+  (e.g. `/code-review high`); pass `--comment` to post findings as inline
+  GitHub PR comments (v2.1.147). The old `/simplify` name no longer works —
+  there is no alias. Updated in `01-slash-commands/README.md`,
+  `03-skills/README.md`, `CATALOG.md`, `QUICK_REFERENCE.md`, and
+  `claude_concepts_guide.md`.
+
+### Changed
+
+- **Renamed the repo's local `code-review` skill to `code-review-specialist`**
+  to avoid colliding with the new built-in `/code-review`. The directory
+  `03-skills/code-review/` → `03-skills/code-review-specialist/`, and all
+  install commands, directory trees, and cross-references were updated in
+  `README.md`, `QUICK_REFERENCE.md`, `INDEX.md`, `CATALOG.md`,
+  `LEARNING-ROADMAP.md`, `claude_concepts_guide.md`, and `03-skills/README.md`.
+  Added a note explaining the collision and how to avoid shadowing the
+  built-in.
+
+### Added
+
+- **`/usage` per-category cost breakdown (v2.1.149)** — the cost view now
+  breaks spending down by category (skills, subagents, plugins, and
+  per-MCP-server costs). Documented in `CATALOG.md` and
+  `claude_concepts_guide.md`.
+- **Pinned background sessions — `Ctrl+T` (v2.1.147)** — pinning a session in
+  `claude agents` keeps it alive when idle, restarts it in place to apply
+  Claude Code updates, and sheds it under memory pressure only after
+  non-pinned sessions. Documented in `10-cli/README.md`.
+- **GFM task-list checkbox rendering (v2.1.149)** — the markdown renderer now
+  renders `- [ ]` / `- [x]` as checkboxes. Documented in
+  `09-advanced-features/README.md`.
+- **`allowAllClaudeAiMcps` managed setting (v2.1.149)** — permits loading
+  claude.ai cloud MCP connectors organization-wide. Documented in
+  `05-mcp/README.md`.
+
+### Removed
+
+- **Stop/SubagentStop hook input fields `background_tasks` and `session_crons`**
+  — removed from `06-hooks/README.md` and `resources.md`. These were added from
+  the v2.1.145 release notes but are not enumerated in the official hooks
+  reference page; removed to keep the docs aligned with the published
+  reference.
+
+### Documentation
+
+- Caught up four module READMEs from v2.1.143 to v2.1.150:
+  `04-subagents/README.md`, `05-mcp/README.md`, `07-plugins/README.md`,
+  `09-advanced-features/README.md`.
+- Bumped every English doc's metadata footer to **v2.1.150 / May 25, 2026** for
+  a consistent sync.
+
+## [v2.1.145] — 2026-05-20
+
+### Synced to Claude Code v2.1.145
+
+Bumps tutorial coverage from Claude Code v2.1.143 → v2.1.145 (May 19, 2026
+release). Anthropic shipped two patches (v2.1.144 and v2.1.145) since the last
+sync. Highlights: the `/extra-usage` rename to `/usage-credits`, `/model`
+becoming session-only by default, three new bundled skills (`/run`, `/verify`,
+`/run-skill-generator`), Stop/SubagentStop hook input fields
+`background_tasks` and `session_crons`, `claude agents --json` for scripting,
+and a security fix that closes the bare-env-var Bash auto-approve loophole.
+This sync also catches up six root-level reference docs
+(`LEARNING-ROADMAP.md`, `QUICK_REFERENCE.md`, `INDEX.md`, `resources.md`,
+`claude_concepts_guide.md`, `STYLE_GUIDE.md`) that were missed in the
+v2.1.143 sync and were still pinned to v2.1.138.
+
+### Added
+
+- `/usage-credits` slash command (v2.1.144) — replaces `/extra-usage` as the
+  primary name; `/extra-usage` still works as an alias. Documented in
+  `01-slash-commands/README.md` and `CATALOG.md`.
+- Three new bundled skills (v2.1.145) — `/run` (launches the project's app to
+  see a change running), `/verify` (builds, runs, and observes the app to
+  confirm a fix works), `/run-skill-generator` (teaches `/run`/`/verify` how
+  to handle a specific project by generating a per-project skill). Documented
+  in `03-skills/README.md`, `CATALOG.md`, and `QUICK_REFERENCE.md`. Brings
+  the canonical bundled-skill count to **9**.
+- Stop/SubagentStop hook input fields `background_tasks` and `session_crons`
+  (v2.1.145) — hook authors can read these to decide whether to block stop
+  while background work or scheduled tasks are still pending. Documented in
+  `06-hooks/README.md`.
+- `claude agents --json` (v2.1.145) — print the agent list as machine-readable
+  JSON for scripting (status bars, session pickers, tmux-resurrect).
+  Documented in `10-cli/README.md`.
+- Five hook-event rows that were missing from summary tables — `Setup`,
+  `UserPromptExpansion`, `PermissionDenied`, `PostToolBatch` (the narrative
+  already claimed "29 events"; the summary tables in `CATALOG.md`,
+  `claude_concepts_guide.md`, and `INDEX.md` only listed 25).
+
+### Behavior changes
+
+- **`/model` is session-only by default (v2.1.144)**: selecting a model now
+  applies only to the current session; press `d` after selecting to set the
+  choice as the new default for future sessions. Documented in
+  `01-slash-commands/README.md`.
+- **Bash bare env-var auto-approve closed (v2.1.145 security fix)**: a
+  command of the form `FOO=bar somecommand` is no longer auto-approved when
+  only `FOO=bar` was on the allowlist. Re-allow such commands explicitly via
+  `Bash(...)` permission rules that cover the full command. Documented in
+  `06-hooks/README.md`.
+- **`context: fork` infinite-loop fix (v2.1.145)**: a skill using
+  `context: fork` could previously trigger an infinite re-invocation loop in
+  rare cases. Documented as a note in `03-skills/README.md`.
+
+### Documentation
+
+- Caught up six root-level reference docs from v2.1.138 to v2.1.145:
+  `LEARNING-ROADMAP.md`, `QUICK_REFERENCE.md`, `INDEX.md`, `resources.md`,
+  `claude_concepts_guide.md`, `STYLE_GUIDE.md`.
+- Fixed the bundled-skills mismatch — `CATALOG.md`, `QUICK_REFERENCE.md`, and
+  `03-skills/README.md` previously listed three different 5-item lists;
+  reconciled to the canonical 9 (`/batch`, `/claude-api`, `/debug`,
+  `/fewer-permission-prompts`, `/loop`, `/run`, `/run-skill-generator`,
+  `/simplify`, `/verify`). The `QUICK_REFERENCE.md` cell had also incorrectly
+  listed `/voice` and `/browse` as bundled skills — neither is bundled.
+- Renamed "New Features (March 2026)" → "New Features (May 2026)" in
+  `QUICK_REFERENCE.md` and `resources.md` to match the rest of the repo.
+- Bumped the version badge in `README.md` from `2.1.138` to `2.1.145` and
+  updated the two "latest: v2.1.138" claims in the body.
+- Updated the STYLE_GUIDE sample metadata footer from `2.1.97` to `2.1.145`
+  so contributors copy the current version.
+
+## [v2.1.143] — 2026-05-19
+
+### Synced to Claude Code v2.1.143
+
+Bumps tutorial coverage from Claude Code v2.1.138 → v2.1.143 (May 15, 2026
+release). Anthropic shipped five patches (v2.1.139–v2.1.143) since the last
+sync. Highlights: `/goal` and `/scroll-speed` slash commands, the `claude
+agents` Agent View (Research Preview) with a full dispatch flag set, a Stop
+hook safety cap, hook exec form (`args`), `continueOnBlock` for PostToolUse,
+hook `terminalSequence` output, Fast Mode defaulting to Opus 4.7,
+PowerShell-by-default on Windows for Bedrock/Vertex/Foundry, and the
+`worktree.bgIsolation` setting.
+
+### Added
+
+- `/goal <statement>` slash command (v2.1.139) — registers a session-level
+  completion condition with a live overlay panel showing elapsed time, turn
+  count, and token usage. Documented in `01-slash-commands/README.md` and
+  cross-linked from `10-cli/README.md`.
+- `/scroll-speed <±N>` slash command (v2.1.139) — tunes TUI live-preview
+  scroll speed; persists per-machine. Documented in
+  `01-slash-commands/README.md`.
+- `claude agents` Agent View (Research Preview, v2.1.139) with dispatch flags
+  `--cwd` (v2.1.141), `--add-dir`, `--settings`, `--mcp-config`,
+  `--plugin-dir`, `--permission-mode`, `--model`, `--effort`,
+  `--dangerously-skip-permissions` (v2.1.142). Documented in
+  `10-cli/README.md`.
+- `claude plugin details <name>` (v2.1.139) — full plugin inventory plus
+  projected per-turn/per-invocation token-cost estimate. LSP servers added
+  to the details pane in v2.1.142. Documented in `07-plugins/README.md`.
+- Marketplace context-cost projection in the `/plugin` browse pane (v2.1.143).
+  Documented in `07-plugins/README.md`.
+- Hook **exec form** (`args: string[]`, v2.1.139) — direct `execve()` spawn
+  with no shell parsing; mutually exclusive with the shell-form `command`
+  field. Documented in `06-hooks/README.md`.
+- Hook `continueOnBlock: true` field on PostToolUse (v2.1.139) — surfaces a
+  blocked tool result back to Claude as a `tool_result` instead of aborting
+  the turn. Documented in `06-hooks/README.md`.
+- Hook `terminalSequence` JSON output field (v2.1.141) — emits raw OSC escape
+  sequences for desktop notifications, window titles, and bells. Documented
+  in `06-hooks/README.md`.
+- `worktree.bgIsolation: "none"` setting (v2.1.143) — background sessions
+  edit the current working copy directly instead of an isolated worktree.
+  Documented in `09-advanced-features/README.md`.
+- `CLAUDE_PROJECT_DIR` is now passed to every MCP stdio server's environment
+  (v2.1.139), and `${CLAUDE_PROJECT_DIR}` substitution is supported in plugin
+  and project `.mcp.json` `command`/`args`/`env` fields. Documented in
+  `05-mcp/README.md`.
+- Subagent OTEL headers `x-claude-code-agent-id` and
+  `x-claude-code-parent-agent-id` (v2.1.139), exposed as
+  `agent_id` / `parent_agent_id` attributes on `claude_code.llm_request`
+  OTEL spans. Documented in `04-subagents/README.md`.
+- `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE=1` (v2.1.142) — pin Fast Mode back
+  to Opus 4.6 after the v2.1.142 default flipped to Opus 4.7. Documented in
+  `10-cli/README.md`.
+- `CLAUDE_CODE_USE_POWERSHELL_TOOL=0` and
+  `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1` (v2.1.143) — opt out of
+  the default-on PowerShell tool, or make it honor the system execution
+  policy instead of `-ExecutionPolicy Bypass`. Documented in
+  `09-advanced-features/README.md`.
+- `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` (v2.1.143) — override the 8-consecutive-
+  blocks safety cap for Stop hooks (set `0` to disable). Documented in
+  `06-hooks/README.md` and `09-advanced-features/README.md`.
+- `CLAUDE_CODE_PLUGIN_PREFER_HTTPS=1` (v2.1.141) — force plugin installs to
+  clone GitHub plugin sources over HTTPS for CI runners without SSH keys.
+  Documented in `07-plugins/README.md`.
+- `ANTHROPIC_WORKSPACE_ID` (v2.1.141) — scopes a federated workload-identity
+  token to a specific workspace. Documented in `09-advanced-features/README.md`.
+- Root-level `SKILL.md` plugin pattern (v2.1.142) — a plugin with only a
+  top-level `SKILL.md` (no `skills/` subdirectory) is surfaced as a single
+  skill. Documented in `07-plugins/README.md`.
+- Plugins marketing name **Routines** for `/schedule` (Anthropic blog,
+  2026-05-14) — surfaced as a one-line note in
+  `09-advanced-features/README.md`; the CLI surface remains `/schedule`.
+
+### Behavior changes
+
+- **Fast Mode default flipped to Opus 4.7 (v2.1.142)**: `/fast` now runs Opus
+  4.7 by default (was Opus 4.6). Set `CLAUDE_CODE_OPUS_4_6_FAST_MODE_OVERRIDE=1`
+  to opt back in.
+- **PowerShell tool enabled by default on Windows for Bedrock/Vertex/Foundry
+  (v2.1.143)**: Claude Code invokes PowerShell with `-ExecutionPolicy Bypass`.
+  Opt out with `CLAUDE_CODE_POWERSHELL_RESPECT_EXECUTION_POLICY=1` (honor
+  system policy) or `CLAUDE_CODE_USE_POWERSHELL_TOOL=0` (disable the tool).
+- **Remote Control, `/schedule`, claude.ai MCP connectors, and notification
+  preferences auto-disabled when API-key auth is set (v2.1.139)**: setting
+  `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, or `apiKeyHelper` disables all
+  four claude.ai-bridged surfaces, even if a claude.ai login is also active.
+- **Stop hook block loops capped at 8 consecutive blocks (v2.1.143)**: the
+  session ends with a warning after 8 in a row, preventing buggy Stop hooks
+  from looping the session forever. Override with
+  `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`.
+- **`subagent_type` matching is now case- and separator-insensitive (v2.1.140)**:
+  `code-reviewer`, `Code Reviewer`, and `code_reviewer` all resolve to the
+  same agent. Documented in `04-subagents/README.md`.
+
+### Changed
+
+- Root reference docs (`README.md`, `CATALOG.md`) updated from `28 hook
+  events` to `29 hook events` — matches `06-hooks/README.md` and
+  `LEARNING-ROADMAP.md` after the `Setup` hook landed in v2.1.138.
+
+### Notes for translators
+
+- Tutorial translations (`vi/`, `ja/`, `uk/`, `zh/`) follow English; sync
+  this round's deltas in module READMEs and the CHANGELOG above. Footers
+  must reflect `Last Updated: May 19, 2026` and `Claude Code Version: 2.1.143`.
+
+## [v2.1.138] — 2026-05-09
+
+### Synced to Claude Code v2.1.138
+
+Bumps tutorial coverage from Claude Code v2.1.131 → v2.1.138 (May 9, 2026
+release). Anthropic shipped seven patches between v2.1.132 and v2.1.138 since
+the last sync.
+
+### Added (English docs)
+
+- `worktree.baseRef` setting (v2.1.133) — controls whether `claude --worktree`
+  branches from `origin/<default>` (`"fresh"`, default) or local `HEAD`
+  (`"head"`). **Behavior change**: the `"fresh"` default reverts the v2.1.128
+  behavior, so users who relied on local-`HEAD` branching after v2.1.128 must
+  opt back in. Documented in `09-advanced-features/README.md`.
+- `autoMode.hard_deny` admin key (v2.1.136) — array of classifier rules that
+  block a class of actions regardless of inferred user intent. Use for
+  actions that must never run in auto mode (e.g., `rm -rf /`, force-push to
+  protected branches). Unlike `soft_deny`, hard-deny rules are not negotiable
+  by the classifier. Documented in `09-advanced-features/README.md`.
+- `parentSettingsBehavior` admin key (v2.1.133+, admin-tier) — controls how
+  the SDK's `managedSettings` merges with parent-process settings.
+  `"first-wins"` keeps existing precedence; `"merge"` deep-merges values.
+  Documented in `09-advanced-features/README.md`.
+- `Setup` hook event — initial environment setup (one-time per session); use
+  to provision tooling or install deps. Brings the documented hook-events
+  total from 28 to 29. Documented in `06-hooks/README.md`.
+- `effort.level` field in hook input JSON (v2.1.133) — exposes the active
+  effort level (`low`/`medium`/`high`/`xhigh`/`max`) to hooks. Documented in
+  `06-hooks/README.md`.
+- `CLAUDE_CODE_SESSION_ID` environment variable in Bash subprocesses
+  (v2.1.132) — session UUID matching the `session_id` field in hook input
+  JSON, for correlating bash logs with hook telemetry. Documented in
+  `06-hooks/README.md`.
+- `CLAUDE_EFFORT` environment variable in Bash subprocesses (v2.1.133) —
+  active effort level, matching `effort.level` in hook input JSON. Documented
+  in `06-hooks/README.md`.
+- `sandbox.bwrapPath` and `sandbox.socatPath` settings (v2.1.133+, Linux/WSL)
+  — point Claude Code at non-standard install locations for `bubblewrap` and
+  `socat`. Default to `$PATH` lookup. Documented in
+  `09-advanced-features/README.md`.
+- `CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN` environment variable (v2.1.132).
+  Documented in `09-advanced-features/README.md`.
+- `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` environment variable
+  (v2.1.136) — re-enables the session-quality survey for organizations
+  capturing OpenTelemetry data; off by default in OTEL deployments.
+  Documented in `09-advanced-features/README.md`.
+
+### Changed
+
+- **Behavior change**: Plan mode now blocks all file writes unconditionally
+  (v2.1.136), including when a matching `Edit(...)` rule exists in
+  `permissions.allow`. Previously a permissive `Edit(...)` rule could let
+  writes through in plan mode; that bypass is closed. Workflows that
+  depended on the older behavior must exit plan mode (`Shift+Tab`) before
+  editing. Documented in `09-advanced-features/README.md`.
+- Plugin spaced slash commands (e.g., `/myplugin review`) now resolve to
+  `/myplugin:review`. Plugin `skills` config entries no longer hide the
+  default `skills/` directory — both are merged. Documented in
+  `07-plugins/README.md`.
+- MCP servers now persist across `/clear` (v2.1.132+). Documented in
+  `05-mcp/README.md`.
+- Subagents discover project, user, and plugin skills via the Skill tool
+  (v2.1.133). Documented in `04-subagents/README.md`.
+- `--permission-mode` is now honored when resuming plan-mode sessions
+  (v2.1.132). Documented in `09-advanced-features/README.md`.
+- `CronList` output now includes the qualifier(s) and the scheduled prompt
+  body (v2.1.136), so you can audit what each cron will run without opening
+  it. Documented in `09-advanced-features/README.md`.
+
+### Fixed
+
+- OAuth refresh-token concurrent-refresh race condition.
+- INDEX.md count drift: Skills 28 → 16, Plugins 40 → 27, Hooks scripts
+  8 → 9 (recounted from the markdown content tree). The new totals reflect a
+  `.md`-only methodology that scopes counts to tutorial content rather than
+  build artifacts and config.
+- Stale source URLs in `CATALOG.md` (v2.1.118 → v2.1.138) and
+  `claude_concepts_guide.md` (v2.1.117 → v2.1.138). Removed a duplicate
+  legacy footer in the concepts guide.
+
+### Notes for translation maintainers
+
+The `vi/`, `zh/`, `uk/`, and `ja/` localized trees are community-maintained
+and may lag the English source. Contributors syncing translations should diff
+against the English files updated in this release.
+
 ## [v2.1.131] — 2026-05-06
 
 ### Synced to Claude Code v2.1.131
@@ -375,3 +1217,11 @@ The `vi/`, `zh/`, and `uk/` localized trees are community-maintained and may lag
 - Update all "Last Updated" dates to February 2026
 
 **Full Changelog**: https://github.com/luongnv89/claude-howto/compare/20779db...v2.0.0
+
+---
+
+**Last Updated**: August 25, 2026
+**Claude Code Version**: 2.1.245
+**Sources**:
+- https://code.claude.com/docs/en/changelog
+**Compatible Models**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

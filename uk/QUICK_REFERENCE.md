@@ -35,10 +35,10 @@ cp 02-memory/personal-CLAUDE.md ~/.claude/CLAUDE.md
 
 ```bash
 # Персональні навички
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # Навички проекту
-cp -r 03-skills/code-review .claude/skills/
+cp -r 03-skills/code-review-specialist .claude/skills/
 ```
 
 ### Субагенти
@@ -55,7 +55,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 
 ```bash
 # Встановити облікові дані
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
 
 # Встановити конфігурацію (рівень проекту)
@@ -79,7 +79,7 @@ chmod +x ~/.claude/hooks/*.sh
 
 ```bash
 # Встановити з прикладів (якщо опубліковані)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 /plugin install devops-automation
 /plugin install documentation
 ```
@@ -108,9 +108,9 @@ chmod +x ~/.claude/hooks/*.sh
 # default        - Запитувати дозвіл на ризиковані дії
 # acceptEdits    - Автоприйняття редагувань, запит на інше
 # plan           - Лише аналіз, без змін (тільки читання)
-# dontAsk        - Приймати все, крім ризикованого
+# dontAsk        - Лише попередньо затверджені інструменти; решта відхиляється
 # auto           - Фоновий класифікатор вирішує автоматично
-# bypassPermissions - Приймати все (потребує --dangerously-skip-permissions)
+# bypassPermissions - Приймати все (--permission-mode bypassPermissions; --dangerously-skip-permissions є еквівалентом)
 
 # Управління сесіями
 /resume                # Відновити попередню розмову
@@ -131,18 +131,18 @@ claude -r "session"    # Відновити сесію за назвою/ID
 | **Навички** | `.claude/skills/*/SKILL.md` | Автовиклик |
 | **Субагенти** | `.claude/agents/*.md` | Автоделегування |
 | **MCP** | `.mcp.json` (проект) або `~/.claude.json` (користувач) | `/mcp__server__action` |
-| **Хуки (25 подій)** | `~/.claude/hooks/*.sh` | Тригер на подію (4 типи) |
+| **Хуки (33 події)** | `~/.claude/hooks/*.sh` | Тригер на подію (5 типів) |
 | **Плагіни** | Через `/plugin install` | Пакет всього |
 | **Контрольні точки** | Вбудовано | `Esc+Esc` або `/rewind` |
 | **Режим планування** | Вбудовано | `/plan <завдання>` |
 | **Режими дозволів (6)** | Вбудовано | `--allowedTools`, `--permission-mode` |
-| **Сесії** | Вбудовано | `/session <команда>` |
+| **Сесії** | Вбудовано | `/resume`, `/rename`, `/branch`, `/fork` |
 | **Фонові завдання** | Вбудовано | Run in background |
-| **Віддалене керування** | Вбудовано | WebSocket API |
-| **Веб-сесії** | Вбудовано | `claude web` |
-| **Git Worktrees** | Вбудовано | `/worktree` |
-| **Автопам'ять** | Вбудовано | Автозбереження в CLAUDE.md |
-| **Список завдань** | Вбудовано | `/task list` |
+| **Віддалене керування** | Вбудовано | `claude --remote-control` або `/remote-control` |
+| **Веб-сесії** | Вбудовано | `claude --cloud "task"` |
+| **Git Worktrees** | Вбудовано | `claude -w <name>` |
+| **Автопам'ять** | Вбудовано | Автозбереження в `~/.claude/projects/<project>/memory/` |
+| **Список завдань** | Вбудовано | `Ctrl+T` (чеклист), `/tasks` (фонова робота) |
 | **Вбудовані навички (5)** | Вбудовано | `/simplify`, `/loop`, `/claude-api`, `/voice`, `/browse` |
 
 ---
@@ -161,11 +161,11 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 # Використання: Автоделегування
 
 # Спосіб 3: Навичка
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 # Використання: Автовиклик
 
 # Спосіб 4: Плагін (найкращий)
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # Використання: /review-pr
 ```
 
@@ -207,7 +207,7 @@ vim CLAUDE.md
 ### Автоматизація та хуки
 
 ```bash
-# Встановити хуки (25 подій, 4 типи: command, http, prompt, agent)
+# Встановити хуки (33 події, 5 типів: command, http, mcp_tool, prompt, agent)
 mkdir -p ~/.claude/hooks
 cp 06-hooks/*.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
@@ -272,10 +272,10 @@ claude --permission-mode plan
 
 ```bash
 # Увімкнути команди агентів
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # Або в settings.json
-{ "agentTeams": { "enabled": true } }
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
 
 # Почніть з: "Implement feature X using a team approach"
 ```
@@ -286,15 +286,15 @@ export CLAUDE_AGENT_TEAMS=1
 # Запускати команду кожні 5 хвилин
 /loop 5m /check-status
 
-# Одноразове нагадування
-/loop 30m "remind me to check the deploy"
+# Одноразове нагадування: попросіть звичайними словами (/loop повторюється, доки його не скасують)
+нагадай мені через 30 хвилин перевірити деплой
 ```
 
 ---
 
 ## 📁 Довідник розташування файлів
 
-```
+```text
 Ваш проект/
 ├── .claude/
 │   ├── commands/              # Слеш-команди тут
@@ -314,9 +314,12 @@ export CLAUDE_AGENT_TEAMS=1
 │   ├── skills/                # Персональні навички
 │   ├── hooks/                 # Скрипти хуків
 │   ├── settings.json          # Налаштування користувача
-│   ├── managed-settings.d/    # Керовані налаштування (enterprise/org)
 │   └── CLAUDE.md              # Персональна пам'ять
 └── .claude.json               # Персональна конфігурація MCP (рівень користувача)
+
+Системний каталог/             # macOS /Library/Application Support/ClaudeCode/, Linux /etc/claude-code/, Windows C:\Program Files\ClaudeCode\
+├── managed-settings.json      # Керовані налаштування (enterprise/org)
+└── managed-settings.d/        # Додаткові файли керованих налаштувань
 ```
 
 ---
@@ -383,7 +386,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 
 ```bash
 # Налаштувати MCP
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 cp 05-mcp/github-mcp.json .mcp.json
 
 # Спробувати MCP-команди
@@ -394,7 +397,7 @@ cp 05-mcp/github-mcp.json .mcp.json
 
 ```bash
 # Встановити навичку
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # Дозвольте автовиклик
 # Просто скажіть: "Review this code for issues"
@@ -404,7 +407,7 @@ cp -r 03-skills/code-review ~/.claude/skills/
 
 ```bash
 # Встановити повний плагін
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # Використати вбудовані функції
 /review-pr
@@ -421,17 +424,17 @@ cp -r 03-skills/code-review ~/.claude/skills/
 | **Auto Mode** | Повністю автономна робота з фоновим класифікатором | Прапорець `--enable-auto-mode`, `Shift+Tab` для зміни режимів |
 | **Канали** | Інтеграція з Discord та Telegram | Прапорець `--channels`, боти Discord/Telegram |
 | **Голосовий ввід** | Голосові команди та контекст для Claude | Команда `/voice` |
-| **Хуки (26 подій)** | Розширена система хуків з 4 типами | Типи: command, http, prompt, agent |
+| **Хуки (33 події)** | Розширена система хуків з 5 типами | Типи: command, http, mcp_tool, prompt, agent |
 | **MCP Elicitation** | MCP-сервери можуть запитувати ввід під час виконання | Автозапит при потребі сервера |
 | **Plugin LSP** | Підтримка Language Server Protocol для плагінів | `userConfig`, змінна `${CLAUDE_PLUGIN_DATA}` |
-| **Віддалене керування** | Керування Claude Code через WebSocket API | `claude --remote` для зовнішніх інтеграцій |
-| **Веб-сесії** | Браузерний інтерфейс Claude Code | `claude web` для запуску |
+| **Віддалене керування** | Керування локальною сесією з claude.ai або застосунку Claude | `claude --remote-control` (або `/remote-control` у сесії) |
+| **Веб-сесії** | Хмарні сесії на claude.ai/code | `claude --cloud "task"` для запуску з термінала |
 | **Десктопний застосунок** | Нативний десктопний застосунок | Завантаження з claude.ai/download |
-| **Список завдань** | Управління фоновими завданнями | `/task list`, `/task status <id>` |
-| **Автопам'ять** | Автоматичне збереження з розмов | Claude автозберігає контекст у CLAUDE.md |
-| **Git Worktrees** | Ізольовані робочі простори для паралельної розробки | `/worktree` для створення |
-| **Вибір моделі** | Перемикання між Sonnet 4.6 та Opus 4.6 | `/model` або прапорець `--model` |
-| **Команди агентів** | Координація кількох агентів | Увімкнути з `CLAUDE_AGENT_TEAMS=1` |
+| **Список завдань** | Управління фоновими завданнями | `/tasks` (псевдонім `/bashes`) |
+| **Автопам'ять** | Автоматичне збереження з розмов | Claude зберігає нотатки в `~/.claude/projects/<project>/memory/MEMORY.md`; керування через `/memory` |
+| **Git Worktrees** | Ізольовані робочі простори для паралельної розробки | `claude --worktree <name>` (або `-w`) |
+| **Вибір моделі** | Перемикання між Fable 5.1, Fable 5, Opus 5, Sonnet 5.5, Sonnet 5, Sonnet 4.6, Opus 4.8 та Haiku 4.5 | `/model` або прапорець `--model` (`sonnet` на Anthropic API вказує на Sonnet 5.5, v2.1.284+) |
+| **Команди агентів** | Координація кількох агентів | Увімкнути з `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (експериментально) |
 | **Заплановані завдання** | Повторювані завдання з `/loop` | `/loop 5m /command` або CronCreate |
 | **Інтеграція з Chrome** | Автоматизація браузера | Прапорець `--chrome` або `/chrome` |
 | **Кастомізація клавіатури** | Налаштування клавіш | Команда `/keybindings` |
@@ -465,7 +468,7 @@ ls -la .claude/agents/
 head -20 .claude/agents/code-reviewer.md
 
 # Перевірити MCP-з'єднання
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 ```
 
 ---
@@ -476,10 +479,10 @@ echo $GITHUB_TOKEN
 |---------|---------------|---------|
 | Швидкий ярлик | Слеш-команда (55+) | `01-slash-commands/optimize.md` |
 | Командні стандарти | Пам'ять | `02-memory/project-CLAUDE.md` |
-| Автоматичний процес | Навичка | `03-skills/code-review/` |
+| Автоматичний процес | Навичка | `03-skills/code-review-specialist/` |
 | Спеціалізоване завдання | Субагент | `04-subagents/code-reviewer.md` |
 | Зовнішні дані | MCP (+ Elicitation) | `05-mcp/github-mcp.json` |
-| Автоматизація подій | Хук (26 подій, 4 типи) | `06-hooks/pre-commit.sh` |
+| Автоматизація подій | Хук (33 події, 5 типів) | `06-hooks/pre-commit.sh` |
 | Комплексне рішення | Плагін (+ LSP) | `07-plugins/pr-review/` |
 | Безпечний експеримент | Контрольна точка | `08-checkpoints/checkpoint-examples.md` |
 | Повна автономія | Auto Mode | `--enable-auto-mode` або `Shift+Tab` |
@@ -541,5 +544,16 @@ echo $GITHUB_TOKEN
 
 ---
 
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/memory#storage-location
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/model-config

@@ -218,11 +218,13 @@ Các script tự động hóa dựa trên sự kiện thực thi tự động.
 
 **Cách Dùng**: Cấu hình trong settings, thực thi tự động
 
-**Hook Types** (4 types, 25 events):
-- Tool Hooks: PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest
-- Session Hooks: SessionStart, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop
-- Task Hooks: UserPromptSubmit, TaskCompleted, TaskCreated, TeammateIdle
-- Lifecycle Hooks: ConfigChange, CwdChanged, FileChanged, PreCompact, PostCompact, WorktreeCreate, WorktreeRemove, Notification, InstructionsLoaded, Elicitation, ElicitationResult
+**Hook Types** (5): `command`, `http`, `prompt`, `mcp_tool`, `agent` — cách hook chạy.
+
+**Hook Events** (33, trong 4 nhóm) — khi nào hook chạy:
+- Tool Hooks: PreToolUse, PostToolUse, PostToolUseFailure, PostToolBatch, PermissionRequest, PermissionDenied
+- Session Hooks: SessionStart, Setup, SessionEnd, Stop, StopFailure, SubagentStart, SubagentStop
+- Task Hooks: UserPromptSubmit, UserPromptExpansion, MessageDisplay, TaskCompleted, TaskCreated, TeammateIdle (TaskCompleted/TaskCreated chỉ phát ra khi bật todo tools — mặc định chỉ có trên Claude 3.x, Opus 4 đến 4.7, Sonnet 4 đến 4.6 và Haiku 4.5; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` khôi phục)
+- Lifecycle Hooks: ConfigChange, CwdChanged, DirectoryAdded, FileChanged, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, WorktreeCreate, WorktreeRemove, Notification, InstructionsLoaded, Elicitation, ElicitationResult
 
 ---
 
@@ -254,7 +256,7 @@ pr-review/
 
 **Commands**: `/review-pr`, `/check-security`, `/check-tests`
 
-**Cài Đặt**: `/plugin install pr-review`
+**Cài Đặt**: `claude --plugin-dir ./07-plugins/pr-review` (từ thư mục gốc của repo)
 
 ---
 
@@ -288,7 +290,7 @@ devops-automation/
 
 **Commands**: `/deploy`, `/rollback`, `/status`, `/incident`
 
-**Cài Đặt**: `/plugin install devops-automation`
+**Cài Đặt**: `claude --plugin-dir ./07-plugins/devops-automation` (từ thư mục gốc của repo)
 
 ---
 
@@ -319,7 +321,7 @@ documentation/
 
 **Commands**: `/generate-api-docs`, `/generate-readme`, `/sync-docs`, `/validate-docs`
 
-**Cài Đặt**: `/plugin install documentation`
+**Cài Đặt**: `claude --plugin-dir ./07-plugins/documentation` (từ thư mục gốc của repo)
 
 **Plus**: `README.md` - Tổng quan plugins và hướng dẫn sử dụng
 
@@ -345,7 +347,7 @@ Lưu trạng thái conversation và khám phá các cách tiếp cận thay th�
 # Để rewind, nhấn Esc hai lần hoặc dùng:
 /rewind
 # Sau đó chọn: Khôi phục code và conversation, Khôi phục conversation,
-# Khôi phục code, Tóm tắt từ đây, hoặc Bỏ qua
+# Khôi phục code, Tóm tắt từ đây, Tóm tắt đến đây, hoặc Bỏ qua
 ```
 
 **Use Cases**:
@@ -367,7 +369,7 @@ Các khả năng nâng cao cho workflows phức tạp.
 | `config-examples.json` | Ví dụ cấu hình | 10+ cấu hình cụ thể theo use-case |
 | `planning-mode-examples.md` | Ví dụ lập kế hoạch | REST API, database migration, refactoring |
 | Scheduled Tasks | Tasks định kỳ với `/loop` và cron tools | Workflows định kỳ tự động |
-| Chrome Integration | Tự động hóa trình duyệt qua headless Chromium | Testing và scraping web |
+| Chrome Integration | Tự động hóa trình duyệt trong Chrome của bạn qua tiện ích Claude in Chrome | Testing và scraping web |
 | Remote Control (expanded) | Phương thức kết nối, bảo mật, bảng so sánh | Quản lý session từ xa |
 | Keyboard Customization | Phím tắt tùy chỉnh, hỗ trợ chord, contexts | Phím tắt cá nhân hóa |
 | Desktop App (expanded) | Connectors, launch.json, tính năng enterprise | Tích hợp desktop | | | |
@@ -393,9 +395,9 @@ Các khả năng nâng cao cho workflows phức tạp.
 - **default**: Hỏi phê duyệt cho hành động rủi ro
 - **acceptEdits**: Tự động chấp nhận edits file, hỏi cho các khác
 - **plan**: Phân tích read-only, không sửa đổi
-- **auto**: Tự động phê duyệt hành động an toàn, hỏi cho rủi ro
-- **dontAsk**: Chấp nhận tất cả trừ rủi ro
-- **bypassPermissions**: Chấp nhận tất cả (yêu cầu `--dangerously-skip-permissions`)
+- **auto**: Mọi thứ, với kiểm tra an toàn chạy nền — một classifier review các lệnh và thao tác ghi vào thư mục được bảo vệ (cấu hình qua đối tượng settings `autoMode`)
+- **dontAsk**: Chỉ các tool đã được phê duyệt trước — tự động từ chối mọi lệnh gọi lẽ ra sẽ hỏi. Claude chỉ chạy các mục khớp `permissions.allow`, các lệnh Bash chỉ-đọc, và các lệnh gọi được hook `PreToolUse` phê duyệt
+- **bypassPermissions**: Chấp nhận tất cả (bật bằng `--permission-mode bypassPermissions` hoặc `--dangerously-skip-permissions` tương đương)
 
 ### Headless Mode (`claude -p`)
 - Tích hợp CI/CD
@@ -424,7 +426,7 @@ Các khả năng nâng cao cho workflows phức tạp.
 - Workflows định kỳ tự động
 
 ### Chrome Integration
-- Tự động hóa trình duyệt qua headless Chromium
+- Tự động hóa trình duyệt trong Chrome của bạn qua tiện ích Claude in Chrome
 - Khả năng testing và scraping web
 - Tương tác trang và trích xuất dữ liệu
 
@@ -456,10 +458,10 @@ Các pattern và tham chiếu sử dụng giao diện dòng lệnh.
 **Tính Năng CLI Chính**:
 - `claude` - Bắt đầu session tương tác
 - `claude -p "prompt"` - Mode headless/không-tương-tác
-- `claude web` - Khởi chạy web session
+- `claude --cloud "task"` - Khởi chạy cloud (web) session
 - `claude --model` - Chọn model (Sonnet 4.6, Opus 4.6)
 - `claude --permission-mode` - Đặt permission mode
-- `claude --remote` - Bật điều khiển từ xa qua WebSocket
+- `claude --remote-control` - Khởi chạy session có thể điều khiển thêm từ claude.ai hoặc ứng dụng Claude
 
 ---
 
@@ -664,16 +666,16 @@ cp 01-slash-commands/optimize.md .claude/commands/
 cp 04-subagents/code-reviewer.md .claude/agents/
 
 # Cài đặt skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # Hoặc cài đặt plugin hoàn chỉnh
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ### DevOps & Triển Khai
 ```bash
 # Cài đặt plugin (bao gồm tất cả)
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ### Tài Liệu
@@ -688,7 +690,7 @@ cp 04-subagents/documentation-writer.md .claude/agents/
 cp -r 03-skills/doc-generator ~/.claude/skills/
 
 # Hoặc cài đặt plugin hoàn chỉnh
-/plugin install documentation
+claude --plugin-dir ./07-plugins/documentation
 ```
 
 ### Tiêu Chuẩn Nhóm
@@ -702,8 +704,10 @@ cp 02-memory/project-CLAUDE.md ./CLAUDE.md
 ### Tích Hợp Bên Ngoài
 ```bash
 # Đặt biến môi trường
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 
 # Cài đặt config MCP (phạm vi dự án)
 cp 05-mcp/multi-mcp.json .mcp.json
@@ -726,7 +730,7 @@ chmod +x ~/.claude/hooks/*.sh
 # Để rewind: nhấn Esc+Esc hoặc dùng:
 /rewind
 # Sau đó chọn: Khôi phục code và conversation, Khôi phục conversation,
-# Khôi phục code, Tóm tắt từ đây, hoặc Bỏ qua
+# Khôi phục code, Tóm tắt từ đây, Tóm tắt đến đây, hoặc Bỏ qua
 
 # Xem 08-checkpoints/README.md cho ví dụ
 ```
@@ -808,12 +812,12 @@ Chạy test trong background
 ### Hiệu Năng
 - `01-slash-commands/optimize.md` - Phân tích hiệu năng
 - `04-subagents/code-reviewer.md` - Review hiệu năng
-- `03-skills/code-review/` - Metrics hiệu năng
+- `03-skills/code-review-specialist/` - Metrics hiệu năng
 - `07-plugins/pr-review/agents/performance-analyzer.md` - Chuyên gia hiệu năng
 
 ### Bảo Mật
 - `04-subagents/secure-reviewer.md` - Review bảo mật
-- `03-skills/code-review/` - Phân tích bảo mật
+- `03-skills/code-review-specialist/` - Phân tích bảo mật
 - `07-plugins/pr-review/` - Kiểm tra bảo mật
 
 ### Testing
@@ -874,9 +878,19 @@ Muốn thêm ví dụ nữa? Theo cấu trúc:
 
 ---
 
-**Cập Nhật Lần**: Tháng 3 năm 2026
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
 **Tổng Số Ví Dụ**: 100+ files
 **Danh Mục**: 10 tính năng
 **Hooks**: 8 scripts tự động hóa
 **Ví Dụ Cấu Hình**: 10+ scenarios
 **Sẵn Sàng Sử Dụng**: Tất cả ví dụ
+**Nguồn**:
+- https://code.claude.com/docs/en/tools-reference#task-tool-availability
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/permission-modes

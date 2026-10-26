@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Claude Code 示例 - 速查卡
@@ -28,10 +28,10 @@ cp 02-memory/personal-CLAUDE.md ~/.claude/CLAUDE.md
 ### Skills
 ```bash
 # 个人 skills
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 项目 skills
-cp -r 03-skills/code-review .claude/skills/
+cp -r 03-skills/code-review-specialist .claude/skills/
 ```
 
 ### Subagents
@@ -46,7 +46,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### MCP
 ```bash
 # 设置凭据
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
 
 # 安装配置（项目级）
@@ -68,7 +68,7 @@ chmod +x ~/.claude/hooks/*.sh
 ### Plugins
 ```bash
 # 从示例安装（如果已发布）
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 /plugin install devops-automation
 /plugin install documentation
 ```
@@ -95,9 +95,9 @@ chmod +x ~/.claude/hooks/*.sh
 # default          - 风险操作需要审批
 # acceptEdits      - 自动接受文件编辑，其他操作仍需审批
 # plan             - 只读分析，不做修改
-# dontAsk          - 除危险操作外全部接受
+# dontAsk          - 只运行预先批准的工具，其余一律拒绝
 # auto             - 后台分类器自动决定权限
-# bypassPermissions - 全部接受（需要 --dangerously-skip-permissions）
+# bypassPermissions - 全部接受（--permission-mode bypassPermissions；--dangerously-skip-permissions 与之等效）
 
 # 会话管理
 /resume                # 恢复之前的对话
@@ -118,18 +118,18 @@ claude -r "session"    # 按名称/ID 恢复会话
 | **Skills** | `.claude/skills/*/SKILL.md` | 自动触发 |
 | **Subagents** | `.claude/agents/*.md` | 自动委派 |
 | **MCP** | `.mcp.json`（项目）或 `~/.claude.json`（用户） | `/mcp__server__action` |
-| **Hooks（25 个事件）** | `~/.claude/hooks/*.sh` | 事件触发（4 类） |
+| **Hooks（33 个事件）** | `~/.claude/hooks/*.sh` | 事件触发（5 类） |
 | **Plugins** | 通过 `/plugin install` | 打包所有能力 |
 | **Checkpoints** | 内置 | `Esc+Esc` 或 `/rewind` |
 | **Planning Mode** | 内置 | `/plan <task>` |
 | **Permission Modes（6 种）** | 内置 | `--allowedTools`、`--permission-mode` |
-| **Sessions** | 内置 | `/session <command>` |
+| **Sessions** | 内置 | `/resume`、`/rename`、`/branch`、`/fork` |
 | **Background Tasks** | 内置 | 在后台运行 |
-| **Remote Control** | 内置 | WebSocket API |
-| **Web Sessions** | 内置 | `claude web` |
-| **Git Worktrees** | 内置 | `/worktree` |
-| **Auto Memory** | 内置 | 自动保存到 `CLAUDE.md` |
-| **Task List** | 内置 | `/task list` |
+| **Remote Control** | 内置 | `claude --remote-control` 或 `/remote-control` |
+| **Web Sessions** | 内置 | `claude --cloud "task"` |
+| **Git Worktrees** | 内置 | `claude -w <name>` |
+| **Auto Memory** | 内置 | 自动保存到 `~/.claude/projects/<project>/memory/` |
+| **Task List** | 内置 | `Ctrl+T`（清单）、`/tasks`（后台工作） |
 | **Bundled Skills（5 个）** | 内置 | `/simplify`、`/loop`、`/claude-api`、`/voice`、`/browse` |
 
 ---
@@ -147,11 +147,11 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 # 使用：自动委派
 
 # 方法 3：skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 # 使用：自动触发
 
 # 方法 4：插件（推荐）
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 # 使用：/review-pr
 ```
 
@@ -189,7 +189,7 @@ vim CLAUDE.md
 
 ### 自动化与 Hooks
 ```bash
-# 安装 hooks（25 个事件，4 类：command、http、prompt、agent）
+# 安装 hooks（33 个事件，5 类：command、http、mcp_tool、prompt、agent）
 mkdir -p ~/.claude/hooks
 cp 06-hooks/*.sh ~/.claude/hooks/
 chmod +x ~/.claude/hooks/*.sh
@@ -249,10 +249,10 @@ claude --permission-mode plan
 ### Agent 团队
 ```bash
 # 启用 agent 团队
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 # 或者在 settings.json 中
-{ "agentTeams": { "enabled": true } }
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
 
 # 用这句话开始："使用团队方式实现功能 X"
 ```
@@ -262,8 +262,8 @@ export CLAUDE_AGENT_TEAMS=1
 # 每 5 分钟运行一次命令
 /loop 5m /check-status
 
-# 一次性提醒
-/loop 30m "提醒我检查部署"
+# 一次性提醒：直接用自然语言提出（/loop 会一直重复直到取消）
+30 分钟后提醒我检查部署
 ```
 
 ---
@@ -290,9 +290,12 @@ User Home/
 │   ├── skills/                # 个人 skills
 │   ├── hooks/                 # hook 脚本
 │   ├── settings.json          # 用户设置
-│   ├── managed-settings.d/    # 托管设置（企业/组织）
 │   └── CLAUDE.md              # 个人 memory
 └── .claude.json               # 个人 MCP 配置（用户级）
+
+系统目录/                      # macOS /Library/Application Support/ClaudeCode/，Linux /etc/claude-code/，Windows C:\Program Files\ClaudeCode\
+├── managed-settings.json      # 托管设置（企业/组织）
+└── managed-settings.d/        # 托管设置的附加文件（drop-in）
 ```
 
 ---
@@ -353,7 +356,7 @@ cp 04-subagents/code-reviewer.md .claude/agents/
 ### 第 4-5 天
 ```bash
 # 设置 MCP
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 cp 05-mcp/github-mcp.json .mcp.json
 
 # 试用 MCP 命令
@@ -363,7 +366,7 @@ cp 05-mcp/github-mcp.json .mcp.json
 ### 第 2 周
 ```bash
 # 安装 skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 让它自动触发
 # 直接说：“Review this code for issues”
@@ -372,7 +375,7 @@ cp -r 03-skills/code-review ~/.claude/skills/
 ### 第 3 周及以后
 ```bash
 # 安装完整插件
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 
 # 使用打包功能
 /review-pr
@@ -389,18 +392,18 @@ cp -r 03-skills/code-review ~/.claude/skills/
 | **Auto Mode** | 通过后台分类器实现完全自治 | `--enable-auto-mode` 参数，`Shift+Tab` 切换模式 |
 | **Channels** | Discord 和 Telegram 集成 | `--channels` 参数，Discord / Telegram bot |
 | **Voice Dictation** | 对 Claude 说出命令和上下文 | `/voice` 命令 |
-| **Hooks（25 个事件）** | 扩展后的 hook 系统，包含 4 类 | command、http、prompt、agent hook 类型 |
+| **Hooks（33 个事件）** | 扩展后的 hook 系统，包含 5 类 | command、http、mcp_tool、prompt、agent hook 类型 |
 | **MCP Elicitation** | MCP server 可在运行时请求用户输入 | 当 server 需要澄清时自动提示 |
 | **WebSocket MCP** | MCP 的 WebSocket 传输 | 在 `.mcp.json` 中配置 `ws://` URL |
 | **Plugin LSP** | 插件支持 Language Server Protocol | `userConfig`、`${CLAUDE_PLUGIN_DATA}` 变量 |
-| **Remote Control** | 通过 WebSocket API 控制 Claude Code | `claude --remote` 用于外部集成 |
-| **Web Sessions** | 基于浏览器的 Claude Code 接口 | 使用 `claude web` 打开 |
+| **Remote Control** | 从 claude.ai 或 Claude 应用操控本地会话 | `claude --remote-control`（会话内可用 `/remote-control`） |
+| **Web Sessions** | claude.ai/code 上的云端会话 | 在终端中用 `claude --cloud "task"` 启动 |
 | **Desktop App** | 原生桌面应用 | 从 claude.ai/download 下载 |
-| **Task List** | 管理后台任务 | `/task list`、`/task status <id>` |
-| **Auto Memory** | 从对话中自动保存记忆 | Claude 会自动保存关键上下文到 `CLAUDE.md` |
-| **Git Worktrees** | 用于并行开发的隔离工作区 | 使用 `/worktree` 创建隔离空间 |
-| **Model Selection** | 在 Sonnet 4.6 和 Opus 4.6 之间切换 | `/model` 或 `--model` 参数 |
-| **Agent Teams** | 协调多个 agent 执行任务 | 通过环境变量 `CLAUDE_AGENT_TEAMS=1` 启用 |
+| **Task List** | 管理后台任务 | `/tasks`（别名 `/bashes`） |
+| **Auto Memory** | 从对话中自动保存记忆 | Claude 将笔记保存到 `~/.claude/projects/<project>/memory/MEMORY.md`；用 `/memory` 管理 |
+| **Git Worktrees** | 用于并行开发的隔离工作区 | `claude --worktree <name>`（或 `-w`） |
+| **Model Selection** | 在 Fable 5.1、Fable 5、Opus 5、Sonnet 5.5、Sonnet 5、Sonnet 4.6、Opus 4.8 和 Haiku 4.5 之间切换 | `/model` 或 `--model` 参数（在 Anthropic API 上 `sonnet` 指向 Sonnet 5.5，v2.1.284+） |
+| **Agent Teams** | 协调多个 agent 执行任务 | 通过环境变量 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 启用（实验性） |
 | **Scheduled Tasks** | 使用 `/loop` 运行周期任务 | `/loop 5m /command` 或 CronCreate 工具 |
 | **Chrome Integration** | 浏览器自动化 | `--chrome` 参数或 `/chrome` 命令 |
 | **Keyboard Customization** | 自定义按键绑定 | `/keybindings` 命令 |
@@ -431,7 +434,7 @@ ls -la .claude/agents/
 head -20 .claude/agents/code-reviewer.md
 
 # 测试 MCP 连接
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 ```
 
 ---
@@ -442,10 +445,10 @@ echo $GITHUB_TOKEN
 |------|--------|------|
 | 快速快捷操作 | Slash Command（55+） | `01-slash-commands/optimize.md` |
 | 团队规范 | Memory | `02-memory/project-CLAUDE.md` |
-| 自动化工作流 | Skill | `03-skills/code-review/` |
+| 自动化工作流 | Skill | `03-skills/code-review-specialist/` |
 | 专门任务 | Subagent | `04-subagents/code-reviewer.md` |
 | 外部数据 | MCP（+ Elicitation、WebSocket） | `05-mcp/github-mcp.json` |
-| 事件自动化 | Hook（25 个事件、4 类） | `06-hooks/pre-commit.sh` |
+| 事件自动化 | Hook（33 个事件、5 类） | `06-hooks/pre-commit.sh` |
 | 完整方案 | Plugin（+ LSP 支持） | `07-plugins/pr-review/` |
 | 安全实验 | Checkpoint | `08-checkpoints/checkpoint-examples.md` |
 | 完全自治 | Auto Mode | `--enable-auto-mode` 或 `Shift+Tab` |
@@ -504,3 +507,19 @@ echo $GITHUB_TOKEN
 **完整索引**：`cat INDEX.md`
 
 **这张卡片**：建议随手保留，方便快速查阅！
+
+---
+
+**最后更新**：2026 年 10 月 18 日
+**Claude Code 版本**：2.1.302
+**来源**：
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/memory#storage-location
+- https://code.claude.com/docs/en/permission-modes
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/model-config

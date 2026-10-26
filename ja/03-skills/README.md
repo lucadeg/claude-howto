@@ -96,7 +96,7 @@ sequenceDiagram
 | **Project** | `.claude/skills/<skill-name>/SKILL.md` | チーム | あり（git 経由） | チームの標準 |
 | **Plugin** | `<plugin>/skills/<skill-name>/SKILL.md` | 有効化された範囲 | プラグインに依存 | プラグインへのバンドル |
 
-スキル名がレベル間で重複する場合、優先度の高い配置場所が優先される: **enterprise > personal > project**。プラグインスキルは `plugin-name:skill-name` の名前空間を用いるため衝突しない。
+スキル名がレベル間で重複する場合、優先度の高い配置場所が優先される: **enterprise > personal > project**。個人スキルはデフォルトでプロジェクトスキルを上書きする。プラグインスキルは `plugin-name:skill-name` の名前空間を用いるため衝突しない。
 
 ### 自動検出
 
@@ -137,10 +137,12 @@ Provide clear, step-by-step guidance for Claude.
 Show concrete examples of using this Skill.
 ```
 
-### 必須フィールド
+### 推奨フィールド
 
-- **name**: 小文字、数字、ハイフンのみ（最大 64 文字）。"anthropic" や "claude" を含めることはできない。
-- **description**: スキルが何をするかと、いつ使うか（最大 1024 文字）。Claude がスキルを発火させるべきタイミングを判断する上で重要である。
+- **description**（推奨）: スキルが何をするかと、いつ使うか。省略した場合、Claude Code は markdown 本文の最初の空でない行を使用する。`description` と `when_to_use` を合わせたテキストはスキル一覧で **1,536 文字**で切り詰められる（`skillListingMaxDescChars` で変更可能）。Claude がスキルを発火させるべきタイミングを判断する際に照合するのはこのテキストである。
+- **name**（任意）: 既定ではスキルの**ディレクトリ名**が使われる。指定した場合は表示名となり、小文字・数字・ハイフンのみ（最大 64 文字）が推奨される移植性のある形式である（claude.ai と Skills API では必須）。Claude Code 自体（v2.1.299+）は、名前に不可視文字・文字方向を変える文字・空白に見える文字、`<` や `>` を含むか、256 文字を超えるスキルやコマンドを、名前を変更するまでスキップする。Claude Code では `anthropic-skills` と `synced` が予約されており、プラグイン外では読み込まれない。"anthropic" や "claude" を含められないというより厳しい制限は、claude.ai や Skills API にアップロードするスキルに適用される。プラグインのスキルでは、`name` はコマンドの最後のセグメントも決定する。
+
+SKILL.md のフロントマターのフィールドはすべて任意であり、推奨されるのは `description` だけである。
 
 ### オプションのフロントマターフィールド
 
@@ -151,13 +153,13 @@ description: What this skill does and when to use it
 argument-hint: "[filename] [format]"        # 自動補完用ヒント
 disable-model-invocation: true              # ユーザーのみ呼び出し可
 user-invocable: false                       # スラッシュメニューから非表示
-allowed-tools: Read, Grep, Glob             # ツールアクセスの制限
+allowed-tools: Read, Grep, Glob             # スキル実行中はこれらのツールを事前承認（許可プロンプトなし）
 model: opus                                 # 使用するモデルの指定
 effort: high                                # 努力レベルの上書き（low, medium, high, max）
 context: fork                               # 隔離されたサブエージェントで実行
 agent: Explore                              # エージェントタイプ（context: fork と併用）
 shell: bash                                 # コマンドのシェル: bash（既定）または powershell
-hooks:                                      # スキルスコープのフック
+hooks:                                      # スキル呼び出し時に登録されるフック
   PreToolUse:
     - matcher: "Bash"
       hooks:
@@ -169,8 +171,9 @@ paths: "src/api/**/*.ts"               # スキルの発火を制限する glob 
 
 | フィールド | 説明 |
 |-------|-------------|
-| `name` | 小文字、数字、ハイフンのみ（最大 64 文字）。"anthropic" や "claude" を含められない。 |
-| `description` | スキルが何をするかと、いつ使うか（最大 1024 文字）。自動呼び出しのマッチングに重要。 |
+| `name` | 推奨（移植性あり）: 小文字、数字、ハイフンのみ（最大 64 文字）。Claude Code では `anthropic-skills` と `synced` が予約されている。 |
+| `description` | スキルが何をするかと、いつ使うか。`description` と `when_to_use` を合わせたテキストはスキル一覧で 1,536 文字で切り詰められる（`skillListingMaxDescChars` で変更可能）。自動呼び出しのマッチングに重要。 |
+| `when_to_use` | Claude がスキルを呼び出すべきタイミングに関する補足情報。スキル一覧では `description` の後ろに連結され、1,536 文字の上限に算入される。 |
 | `argument-hint` | `/` の自動補完メニューに表示されるヒント（例: `"[filename] [format]"`）。 |
 | `disable-model-invocation` | `true` = ユーザーのみが `/name` で呼び出せる。Claude は自動呼び出ししない。 |
 | `user-invocable` | `false` = `/` メニューから非表示。Claude のみが自動呼び出し可能。 |
@@ -179,8 +182,8 @@ paths: "src/api/**/*.ts"               # スキルの発火を制限する glob 
 | `effort` | スキルが有効な間の努力レベルの上書き: `low`, `medium`, `high`, `max`。 |
 | `context` | `fork` を指定するとスキルを独自のコンテキストウィンドウを持つフォーク済みサブエージェントコンテキストで実行する。 |
 | `agent` | `context: fork` の際のサブエージェントタイプ（例: `Explore`, `Plan`, `general-purpose`）。 |
-| `shell` | `!`command`` 置換とスクリプトに使うシェル: `bash`（既定）または `powershell`。 |
-| `hooks` | このスキルのライフサイクルにスコープされたフック（グローバルフックと同じ形式）。 |
+| `shell` | `` !`command` `` 置換とスクリプトに使うシェル: `bash`（既定）または `powershell`。 |
+| `hooks` | スキル呼び出し時に登録されるフック（settings のフックと同じ形式。任意のイベント）。登録後はセッションの残りの間ずっと有効。 |
 | `paths` | スキルが自動発火する条件を制限する glob パターン。カンマ区切り文字列または YAML リスト。パス固有ルールと同じ形式。 |
 
 ## スキルのコンテンツの種類
@@ -266,7 +269,9 @@ Fix GitHub issue $ARGUMENTS following our coding standards.
 
 ## 動的コンテキストの注入
 
-`!`command`` 構文は、スキルコンテンツが Claude に送信される前にシェルコマンドを実行する。
+`` !`command` `` 構文は、スキルコンテンツが Claude に送信される前にシェルコマンドを実行する。
+
+> **注記（v2.1.299）**: `UserPromptSubmit` フックはコマンドが展開される前に実行されるため、プロンプトをブロックするフックはこれらの `!` コマンドの実行も止める。
 
 ```yaml
 ---
@@ -313,7 +318,7 @@ agent: Explore
 
 ```yaml
 ---
-name: deep-research
+name: topic-research
 description: Research a topic thoroughly
 context: fork
 agent: Explore
@@ -496,11 +501,11 @@ description: Create or update CLAUDE.md files following best practices for optim
 
 ## Core Principles
 
-**LLMs are stateless**: CLAUDE.md is the only file automatically included in every conversation.
+**LLMs are stateless**: CLAUDE.md is the main project file loaded into every conversation (alongside auto memory and unscoped rules).
 
 ### The Golden Rules
 
-1. **Less is More**: Keep under 300 lines (ideally under 100)
+1. **Less is More**: Keep each CLAUDE.md under 200 lines
 2. **Universal Applicability**: Only include information relevant to EVERY session
 3. **Don't Use Claude as a Linter**: Use deterministic tools instead
 4. **Never Auto-Generate**: Craft it manually with careful consideration
@@ -535,7 +540,7 @@ refactor/
 
 ```yaml
 ---
-name: code-refactor
+name: refactor
 description: Systematic code refactoring based on Martin Fowler's methodology. Use when users ask to refactor code, improve code structure, reduce technical debt, or eliminate code smells.
 ---
 
@@ -617,7 +622,7 @@ Can you help me review this code for security issues?
 
 ### スキルの更新
 
-`SKILL.md` を直接編集する。変更は次回の Claude Code 起動時に反映される。
+`SKILL.md` を直接編集し、`/reload-skills`（v2.1.152 以降）でスキルディレクトリを再スキャンする。再起動でも反映されるが必須ではない。`--add-dir` のスキルはライブ検出され、`SessionStart` フックが `reloadSkills: true` を返しても同じ再スキャンが走る。
 
 ```bash
 # 個人スキル
@@ -730,7 +735,7 @@ Claude が期待通りにスキルを使わない場合:
 
 ### Claude が一部のスキルを認識しない場合
 
-スキルの description は **コンテキストウィンドウの 1 %** を上限としてロードされる（フォールバック: **8,000 文字**）。各エントリはバジェットに関係なく 250 文字に制限される。`/context` を実行して除外されたスキルに関する警告を確認する。バジェットは環境変数 `SLASH_COMMAND_TOOL_CHAR_BUDGET` で上書きできる。
+スキルの description は **コンテキストウィンドウの 1 %** を上限としてロードされる（フォールバック: **8,000 文字**）。各エントリの `description` + `when_to_use` は、デフォルトで 1,536 文字に制限される（`skillListingMaxDescChars`）。`/context` を実行して除外されたスキルに関する警告を確認する。バジェットは環境変数 `SLASH_COMMAND_TOOL_CHAR_BUDGET` で上書きできる。
 
 ## セキュリティ上の考慮事項
 
@@ -754,7 +759,7 @@ Claude が期待通りにスキルを使わない場合:
 }
 ```
 
-`disableSkillShellExecution` が `true` のとき、スキル内の `` !`command` `` マーカーは実行されずリテラル文字列として残される。スキル自体を無効化することなく、スキルレベルのシェルインジェクション攻撃面を取り除ける。多層防御のため、`allowedTools` 許可リストとの組み合わせを検討するとよい。
+`disableSkillShellExecution` が `true` のとき、スキル内の各 `` !`command` `` マーカーは実行されず、`[shell command execution disabled by policy]` に置き換えられる。スキル自体を無効化することなく、スキルレベルのシェルインジェクション攻撃面を取り除ける。多層防御のため、`allowedTools` 許可リストとの組み合わせを検討するとよい。
 
 ## スキルと他機能の比較
 
@@ -776,7 +781,7 @@ Claude Code には、インストール不要で常時利用できる組み込�
 | `/simplify` | 変更ファイルを再利用性、品質、効率の観点でレビューする。3 つの並列レビューエージェントを起動 |
 | `/batch <instruction>` | git worktree を用いてコードベース全体に大規模な並列変更をオーケストレーション |
 | `/debug [description]` | デバッグログを読んで現在のセッションをトラブルシュート |
-| `/loop [interval] <prompt>` | プロンプトを定期的に繰り返し実行（例: `/loop 5m check the deploy`） |
+| `/loop [interval] [prompt]` | プロンプトを定期的に繰り返し実行（例: `/loop 5m check the deploy`） |
 | `/claude-api` | Claude API/SDK リファレンスをロード。`anthropic`/`@anthropic-ai/sdk` のインポート時に自動発火 |
 
 これらのスキルは追加インストールや設定なしでそのまま使える。カスタムスキルと同じ SKILL.md 形式に従う。
@@ -823,10 +828,19 @@ chmod +x ~/.claude/skills/my-skill/scripts/*.py
 - [フックガイド](../06-hooks/) - イベント駆動の自動化
 
 ---
-**最終更新**: 2026 年 4 月 24 日
-**Claude Code バージョン**: 2.1.119
+**最終更新**: 2026 年 10 月 18 日
+**Claude Code バージョン**: 2.1.302
 **情報源**:
 - https://code.claude.com/docs/en/skills
 - https://code.claude.com/docs/en/settings
 - https://code.claude.com/docs/en/changelog
-**対応モデル**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
+- https://code.claude.com/docs/en/settings-reference
+- https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents
+- https://code.claude.com/docs/en/skills#characters-a-skill-name-cant-hold
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/changelog#2-1-299
+- https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill
+- https://code.claude.com/docs/en/memory#write-effective-instructions
+- https://code.claude.com/docs/en/memory
+- https://code.claude.com/docs/en/commands
+**対応モデル**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

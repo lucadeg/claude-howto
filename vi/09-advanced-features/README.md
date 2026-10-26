@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Advanced Features
@@ -43,7 +43,7 @@ Advanced features in Claude Code extend the core capabilities with planning, rea
 **Key advanced features include:**
 - **Planning Mode**: Create detailed implementation plans before coding
 - **Extended Thinking**: Deep reasoning for complex problems
-- **Auto Mode**: Background safety classifier reviews each action before execution (Research Preview)
+- **Auto Mode**: Background safety classifier reviews each action before execution
 - **Background Tasks**: Run long operations without blocking the conversation
 - **Permission Modes**: Control what Claude can do (`default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions`)
 - **Print Mode**: Run Claude Code non-interactively for automation and CI/CD (`claude -p`)
@@ -111,7 +111,7 @@ claude --permission-mode plan
 
 **Keyboard shortcut**:
 - `Shift + Tab` - Toggle permission modes (including plan)
-- `Alt + M` - Toggle permission modes (Windows/Linux)
+- `Alt + M` - Toggle permission modes (Windows only, when the runtime doesn't enable VT input mode)
 
 ### Benefits of Planning Mode
 
@@ -343,21 +343,22 @@ Toggle during a session with `Alt+T` / `Option+T`, set effort with `/effort`, or
 
 ## Auto Mode
 
-Auto Mode is a Research Preview permission mode (March 2026) that uses a background safety classifier to review each action before execution. It allows Claude to work autonomously while blocking dangerous operations.
+Auto Mode is a permission mode that uses a background safety classifier to review each action before execution. It allows Claude to work autonomously while blocking dangerous operations. It's available on all plans, but requires an eligible model and provider.
 
 ### Requirements
 
 - **Plan**: Team plan (Enterprise and API rolling out)
 - **Model**: Claude Sonnet 4.6 or Opus 4.6
-- **Classifier**: Runs on Claude Sonnet 4.6 (adds extra token cost)
+- **Classifier**: Tốn thêm chi phí token, ngoại trừ trên gói Enterprise và tài khoản Claude API, nơi v2.1.278+ chạy kiểm tra phía máy chủ mà không tính phí
 
 ### Enabling Auto Mode
 
 ```bash
-# Unlock auto mode with CLI flag
-claude --enable-auto-mode
+# Interactive sessions start in auto mode when no permission mode is configured (v2.1.284+)
+# To pick it explicitly, for example when your settings default to another mode:
+claude --permission-mode auto
 
-# Then cycle to it with Shift+Tab in the REPL
+# Or cycle to it with Shift+Tab in the REPL
 ```
 
 Or set it as the default permission mode:
@@ -423,9 +424,9 @@ When the classifier is uncertain, auto mode falls back to prompting the user:
 
 This ensures the user always retains control when the classifier cannot confidently approve an action.
 
-### Seeding Auto-Mode-Equivalent Permissions (No Team Plan Required)
+### Seeding Auto-Mode-Equivalent Permissions
 
-If you don't have a Team plan or want a simpler approach without the background classifier, you can seed your `~/.claude/settings.json` with a conservative baseline of safe permission rules. The script starts with read-only and local-inspection rules, then lets you opt into edits, tests, local git writes, package installs, and GitHub write actions only when you want them.
+If you want a simpler approach without the background classifier, you can seed your `~/.claude/settings.json` with a conservative baseline of safe permission rules. The script starts with read-only and local-inspection rules, then lets you opt into edits, tests, local git writes, package installs, and GitHub write actions only when you want them.
 
 **File:** `09-advanced-features/setup-auto-mode-permissions.py`
 
@@ -445,15 +446,14 @@ The script adds rules across these categories:
 
 | Category | Examples |
 |----------|---------|
-| Core read-only tools | `Read(*)`, `Glob(*)`, `Grep(*)`, `Agent(*)`, `WebSearch(*)`, `WebFetch(*)` |
+| Core read-only tools | `Read(*)`, `Grep(*)`, `Agent(*)`, `WebSearch(*)`, `WebFetch(*)` |
 | Local inspection | `Bash(git status:*)`, `Bash(git log:*)`, `Bash(git diff:*)`, `Bash(cat:*)` |
-| Optional edits | `Edit(*)`, `Write(*)`, `NotebookEdit(*)` |
+| Optional edits | `Edit(*)` |
 | Optional test/build | `Bash(pytest:*)`, `Bash(python3 -m pytest:*)`, `Bash(cargo test:*)` |
-| Optional git writes | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git stash:*)` |
-| Git (local write) | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git checkout:*)` |
-| Package managers | `Bash(npm install:*)`, `Bash(pip install:*)`, `Bash(cargo build:*)` |
+| Optional git writes | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git checkout:*)`, `Bash(git switch:*)`, `Bash(git stash:*)`, `Bash(git tag:*)` |
+| Package managers | `Bash(npm ci:*)`, `Bash(npm install:*)`, `Bash(pip install:*)`, `Bash(pip3 install:*)` |
 | Build & test | `Bash(make:*)`, `Bash(pytest:*)`, `Bash(go test:*)` |
-| Common shell | `Bash(ls:*)`, `Bash(cat:*)`, `Bash(find:*)`, `Bash(cp:*)`, `Bash(mv:*)` |
+| Common shell | `Bash(ls:*)`, `Bash(cat:*)`, `Bash(find:*)` |
 | GitHub CLI | `Bash(gh pr view:*)`, `Bash(gh pr create:*)`, `Bash(gh issue list:*)` |
 
 Dangerous operations (`rm -rf`, `sudo`, force push, `DROP TABLE`, `terraform destroy`, etc.) are intentionally excluded. The script is idempotent — running it twice won't duplicate rules.
@@ -479,10 +479,8 @@ User: Run tests in background
 
 Claude: Started task bg-1234
 
-/task list           # Show all tasks
-/task status bg-1234 # Check progress
-/task show bg-1234   # View output
-/task cancel bg-1234 # Cancel task
+/tasks    # View and manage background work (shells and subagents); stop a task from here
+Ctrl+B    # Move a running Bash command or agent to the background
 ```
 
 ### Starting Background Tasks
@@ -504,44 +502,19 @@ Claude: [Works on auth module while tests run in background]
 Claude: 📢 Background task bg-1234 completed:
 ✅ 245 tests passed
 ❌ 3 tests failed
-View results: /task show bg-1234
+View results: /tasks
 ```
 
 ### Managing Background Tasks
 
-**List active tasks**:
-```
-User: /task list
+Chạy `/tasks` (bí danh `/bashes`) để liệt kê các shell và subagent đang chạy, mở một mục để xem đầu ra, hoặc dừng nó. Không có lệnh con `/task` nào.
 
-Active background tasks:
-1. [bg-1234] Running tests (50% complete, 2min remaining)
-2. [bg-1235] Building Docker image (25% complete, 8min remaining)
-3. [bg-1236] Deploying to staging (90% complete, 30sec remaining)
-```
+```text
+User: /tasks
 
-**Check task status**:
-```
-User: /task status bg-1234
-
-Task bg-1234: Running tests
-Status: In progress
-Progress: 120/245 tests (49%)
-Started: 2025-11-08 10:30:15
-Estimated completion: 2025-11-08 10:34:22
-```
-
-**View task output**:
-```
-User: /task show bg-1234
-
-[Shows live output from the test run]
-```
-
-**Cancel task**:
-```
-User: /task cancel bg-1234
-
-Cancelled background task bg-1234
+[Opens the background-work view: running shells and subagents,
+ including subagents that have finished. Select one to see its
+ output, or stop it from here.]
 ```
 
 ### Example: Parallel Development
@@ -571,17 +544,14 @@ Claude: [Shows linter output from bg-5002]
 
 ### Configuration
 
-```json
-{
-  "backgroundTasks": {
-    "enabled": true,
-    "maxConcurrentTasks": 5,
-    "notifyOnCompletion": true,
-    "autoCleanup": true,
-    "logOutput": true
-  }
-}
+There is no `settings.json` block for background tasks. The feature is controlled by an environment variable:
+
+```bash
+# Turn background tasks off entirely
+export CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=true
 ```
+
+Concurrency is not a background-task setting either — how many agents run at once is governed by `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (default `20`).
 
 ---
 
@@ -672,17 +642,17 @@ Permission modes control what actions Claude can take without explicit approval.
 | `default` | Read files only; prompts for all other actions |
 | `acceptEdits` | Read and edit files; prompts for commands |
 | `plan` | Read files only (research mode, no edits) |
-| `auto` | All actions with background safety classifier checks (Research Preview) |
+| `auto` | All actions with background safety classifier checks |
 | `bypassPermissions` | All actions, no permission checks (dangerous) |
 | `dontAsk` | Only pre-approved tools execute; all others denied |
 
-Cycle through modes with `Shift+Tab` in the CLI. Set a default with the `--permission-mode` flag or the `permissions.defaultMode` setting.
+Cycle through modes with `Shift+Tab` in the CLI. Set a default with the `--permission-mode` flag or the `permissions.defaultMode` setting. When no permission mode is configured, interactive terminal and VS Code sessions start in auto mode on every plan and provider since v2.1.284 (v2.1.283 did this only on third-party providers such as Bedrock, Google Cloud's Agent Platform, and Foundry, or with telemetry off); `permissions.defaultMode` still overrides it, and a session where auto mode isn't available starts in Manual instead. Since v2.1.302, `claude -p` and Agent SDK sessions that set no permission mode start in `default` mode on third-party providers, with telemetry off, or on a fresh install; pass `--permission-mode auto` to keep auto mode.
 
 ### Activation Methods
 
 **Keyboard shortcut**:
 ```bash
-Shift + Tab  # Cycle through all 6 modes
+Shift + Tab  # Cycle default → acceptEdits → plan, then bypassPermissions/auto when available (dontAsk never appears in the cycle)
 ```
 
 **Slash command**:
@@ -948,7 +918,7 @@ Claude Code supports keyboard shortcuts for efficiency. Here's the complete refe
 | `Ctrl+C` | Cancel current input/generation |
 | `Ctrl+D` | Exit Claude Code |
 | `Ctrl+G` | Edit plan in external editor |
-| `Ctrl+L` | Clear terminal screen |
+| `Ctrl+L` | Vẽ lại màn hình (chỉ repaint — phím tắt nhấn đúp để `/clear` đã bị gỡ ở v2.1.238) |
 | `Ctrl+O` | Toggle verbose output (view reasoning) |
 | `Ctrl+R` | Reverse search history |
 | `Ctrl+T` | Toggle task list view |
@@ -1028,7 +998,7 @@ Keybindings support chord sequences (multi-key combinations):
 ```
 
 **Keystroke syntax**:
-- **Modifiers**: `ctrl`, `alt` (or `opt`), `shift`, `meta` (or `cmd`)
+- **Modifiers**: `ctrl` (or `control`), `alt` (or `opt`, `option`, `meta`), `shift`, and `cmd` (or `command`, `super`, `win`) — `cmd` is a separate modifier, not an alias of `meta`, and is only detected in terminals that report the Super key
 - **Uppercase implies Shift**: `K` is equivalent to `shift+k`
 - **Special keys**: `escape`, `enter`, `return`, `tab`, `space`, `backspace`, `delete`, arrow keys
 
@@ -1075,26 +1045,22 @@ User: Ctrl+R  # Search history
 
 ### Multi-line Input
 
-For complex queries, use multi-line mode:
+For complex queries, start a new line with `\` + Enter, Option+Enter (macOS), Shift+Enter, or Ctrl+J. There is no `\end` terminator — press Enter to send:
 
 ```bash
-User: \
-> Long complex prompt
-> spanning multiple lines
-> \end
+User: Long complex prompt \
+spanning multiple lines
 ```
 
 **Example:**
 
 ```
-User: \
-> Implement a user authentication system
-> with the following requirements:
-> - JWT tokens
-> - Email verification
-> - Password reset
-> - 2FA support
-> \end
+User: Implement a user authentication system \
+with the following requirements: \
+- JWT tokens \
+- Email verification \
+- Password reset \
+- 2FA support
 
 Claude: [Processes the multi-line request]
 ```
@@ -1175,8 +1141,8 @@ Channels (Research Preview) allow MCP servers to push messages into running Clau
 ### Subscribing to Channels
 
 ```bash
-# Subscribe to channel plugins at startup
-claude --channels discord,telegram
+# Subscribe to channel plugins at startup (space-separated)
+claude --channels plugin:discord@claude-plugins-official plugin:telegram@claude-plugins-official
 ```
 
 ### Supported Integrations
@@ -1192,24 +1158,28 @@ claude --channels discord,telegram
 
 ```json
 {
-  "allowedChannelPlugins": ["discord", "telegram"]
+  "channelsEnabled": true,
+  "allowedChannelPlugins": [
+    { "marketplace": "claude-plugins-official", "plugin": "discord" },
+    { "marketplace": "claude-plugins-official", "plugin": "telegram" }
+  ]
 }
 ```
 
-The `allowedChannelPlugins` managed setting controls which channel plugins are permitted across the organization.
+The `allowedChannelPlugins` managed setting controls which channel plugins are permitted across the organization. It replaces the Anthropic-maintained allowlist and requires `channelsEnabled: true`.
 
 ### How It Works
 
 1. MCP servers act as channel plugins that connect to external services
 2. Incoming messages are pushed into the active Claude Code session
 3. Claude can read and respond to messages within the session context
-4. Channel plugins must be approved via the `allowedChannelPlugins` managed setting
+4. Channel plugins must be on the Anthropic-maintained allowlist, or on your organization's `allowedChannelPlugins` list when an admin sets one
 
 ---
 
 ## Chrome Integration
 
-Chrome Integration connects Claude Code to your Chrome or Microsoft Edge browser for live web automation and debugging. This is a beta feature available since v2.0.73+ (Edge support added in v1.0.36+).
+Chrome Integration connects Claude Code to your Chrome or Microsoft Edge browser for live web automation and debugging. This is a beta feature available since v2.0.73+ (requires Claude in Chrome extension v1.0.36+).
 
 ### Enabling Chrome Integration
 
@@ -1249,7 +1219,7 @@ Claude Code controls the browser in a visible window — you can watch actions h
 
 ### Known limitations
 
-- **Browser support**: Chrome and Edge only — Brave, Arc, and other Chromium browsers are not supported
+- **Browser support**: Chrome and Edge; Claude Code also connects in other Chromium-based browsers such as Brave, Arc, Vivaldi, and Opera
 - **WSL**: Not available in Windows Subsystem for Linux
 - **Third-party providers**: Not supported with Bedrock, Vertex, or Foundry API providers
 - **Service worker idle**: The Chrome extension service worker may go idle during extended sessions
@@ -1287,8 +1257,8 @@ claude remote-control --name "Auth Refactor"
 |------|-------------|
 | `--name "title"` | Custom session title for easy identification |
 | `--verbose` | Show detailed connection logs |
-| `--sandbox` | Enable filesystem and network isolation |
-| `--no-sandbox` | Disable sandboxing (default) |
+
+> **Lưu ý (v2.1.300)**: `claude remote-control` không còn chấp nhận `--sandbox` hoặc `--no-sandbox` (chúng chưa bao giờ có tác dụng; truyền một trong hai giờ sẽ thoát với lỗi). Để chạy các phiên Remote Control trong sandbox, đặt `sandbox.enabled` trong một tệp cài đặt.
 
 ### Connecting to a session
 
@@ -1315,9 +1285,9 @@ Three ways to connect from another device:
 
 ### Limitations
 
-- One remote session per Claude Code instance
+- Một phiên từ xa cho mỗi tiến trình Claude Code tương tác — chế độ server (`claude remote-control`) phục vụ nhiều phiên cùng lúc (`--capacity`, mặc định 32)
 - Terminal must stay open on the host machine
-- Session times out after ~10 minutes if the network is unreachable
+- Nếu mạng không truy cập được, chế độ server thoát sau ~10 phút; phiên tương tác tiếp tục thử lại và kết nối lại khi mạng trở lại
 
 ### Use cases
 
@@ -1399,10 +1369,15 @@ Configure dev server behavior in `.claude/launch.json`:
 
 ```json
 {
-  "command": "npm run dev",
-  "port": 3000,
-  "readyPattern": "ready on",
-  "persistCookies": true
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "my-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
 }
 ```
 
@@ -1428,13 +1403,14 @@ Connect external services for richer context:
 
 ### Permission modes in Desktop
 
-The Desktop App supports the same 4 permission modes as the CLI:
+The Desktop App supports the same permission modes as the CLI:
 
 | Mode | Behavior |
 |------|----------|
-| **Ask permissions** (default) | Review and approve every edit and command |
-| **Auto accept edits** | File edits auto-approved; commands require manual approval |
-| **Plan mode** | Review approach before any changes are made |
+| **Manual** (default) | Review and approve every edit and command |
+| **Accept edits** | File edits auto-approved; commands require manual approval |
+| **Plan** | Review approach before any changes are made |
+| **Auto** | Runs without routine prompts; a background classifier checks actions first |
 | **Bypass permissions** | Automatic execution (sandbox-only, admin-controlled) |
 
 ### Enterprise features
@@ -1548,16 +1524,19 @@ Sandboxing provides OS-level filesystem and network isolation for Bash commands 
 
 ### Enabling Sandboxing
 
-**Slash command**:
-```
+**Slash command** (lưu lựa chọn vào `.claude/settings.local.json` cho dự án này):
+```text
 /sandbox
 ```
 
-**CLI flags**:
+**Tệp cài đặt** (mọi dự án): đặt `"sandbox": { "enabled": true }` trong `~/.claude/settings.json`.
+
+**Theo phiên**, không ghi vào tệp cài đặt:
 ```bash
-claude --sandbox       # Enable sandboxing
-claude --no-sandbox    # Disable sandboxing
+claude --settings '{"sandbox": {"enabled": true}}'
 ```
+
+> Không có cờ `claude --sandbox` / `--no-sandbox`. Từ v2.1.300, truyền chúng cho `claude remote-control` sẽ thoát với lỗi.
 
 ### Configuration Settings
 
@@ -1581,8 +1560,7 @@ claude --no-sandbox    # Disable sandboxing
       "allowWrite": ["/Users/me/project"],
       "allowRead": ["/Users/me/project", "/usr/local/lib"],
       "denyRead": ["/Users/me/.ssh", "/Users/me/.aws"]
-    },
-    "enableWeakerNetworkIsolation": true
+    }
   }
 }
 ```
@@ -1592,7 +1570,7 @@ claude --no-sandbox    # Disable sandboxing
 - Bash commands run in a sandboxed environment with restricted filesystem access
 - Network access can be isolated to prevent unintended external connections
 - Works alongside permission rules for defense in depth
-- On macOS, use `sandbox.enableWeakerNetworkIsolation` for network restrictions (full network isolation is not available on macOS)
+- On macOS, Seatbelt blocks all network connections except the one to the sandbox proxy; `sandbox.enableWeakerNetworkIsolation` **weakens** that isolation and is only for tools such as Go CLIs behind a MITM `httpProxyPort` proxy
 
 ### Use Cases
 
@@ -1617,10 +1595,10 @@ Managed Settings enable enterprise administrators to deploy Claude Code configur
 
 ### Managed Drop-ins
 
-Since v2.1.83, administrators can deploy multiple managed settings files into a `managed-settings.d/` directory. Files are merged in alphabetical order, allowing modular configuration across teams:
+Since v2.1.83, administrators can deploy multiple managed settings files into a `managed-settings.d/` directory. Files are merged in alphabetical order, allowing modular configuration across teams. The directory sits next to `managed-settings.json` in the system directory (`/Library/Application Support/ClaudeCode/` on macOS, `/etc/claude-code/` on Linux, `C:\Program Files\ClaudeCode\` on Windows):
 
 ```
-~/.claude/managed-settings.d/
+/etc/claude-code/managed-settings.d/
   00-org-defaults.json
   10-team-policies.json
   20-project-overrides.json
@@ -1630,7 +1608,7 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
 
 | Setting | Description |
 |---------|-------------|
-| `disableBypassPermissionsMode` | Prevent users from enabling bypass permissions |
+| `permissions.disableBypassPermissionsMode` | Set to `"disable"` to prevent users from enabling bypass permissions |
 | `availableModels` | Restrict which models users can select |
 | `allowedChannelPlugins` | Control which channel plugins are permitted |
 | `autoMode.environment` | Configure trusted infrastructure for auto mode |
@@ -1644,8 +1622,11 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>disableBypassPermissionsMode</key>
-  <true/>
+  <key>permissions</key>
+  <dict>
+    <key>disableBypassPermissionsMode</key>
+    <string>disable</string>
+  </dict>
   <key>availableModels</key>
   <array>
     <string>claude-sonnet-4-6</string>
@@ -1661,30 +1642,40 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
 
 ### Configuration File Locations
 
-1. **Global config**: `~/.claude/config.json`
-2. **Project config**: `./.claude/config.json`
-3. **User config**: `~/.config/claude-code/settings.json`
+1. **User settings**: `~/.claude/settings.json`
+2. **Project settings**: `.claude/settings.json` (checked in)
+3. **Local project settings**: `.claude/settings.local.json` (not checked in)
+4. **Managed settings**: `managed-settings.json` in the system directory (see Managed Settings above)
 
 ### Complete Configuration Example
 
-**Core advanced features configuration:**
+**Core advanced features configuration** (`.claude/settings.json`):
 
 ```json
 {
   "permissions": {
-    "mode": "default"
+    "defaultMode": "manual"
   },
   "hooks": {
-    "PreToolUse:Edit": "eslint --fix ${file_path}",
-    "PostToolUse:Write": "~/.claude/hooks/security-scan.sh"
-  },
-  "mcp": {
-    "enabled": true,
-    "servers": {
-      "github": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"]
-      }
+    "PreToolUse": [
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "~/.claude/hooks/eslint-fix.sh" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Write", "hooks": [{ "type": "command", "command": "~/.claude/hooks/security-scan.sh" }] }
+    ]
+  }
+}
+```
+
+Hook scripts receive the tool input as JSON on stdin (for example `tool_input.file_path`); there is no `${file_path}` substitution. MCP servers are not a settings key — define them in `.mcp.json` at the project root:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}" }
     }
   }
 }
@@ -1695,31 +1686,20 @@ Since v2.1.83, administrators can deploy multiple managed settings files into a 
 ```json
 {
   "permissions": {
-    "mode": "default",
-    "allowedTools": ["Bash(git log:*)", "Read"],
-    "disallowedTools": ["Bash(rm -rf:*)"]
+    "defaultMode": "manual",
+    "allow": ["Bash(git log:*)", "Read"],
+    "deny": ["Bash(rm -rf:*)"]
   },
 
   "hooks": {
-    "PreToolUse": [{ "matcher": "Edit", "hooks": ["eslint --fix ${file_path}"] }],
-    "PostToolUse": [{ "matcher": "Write", "hooks": ["~/.claude/hooks/security-scan.sh"] }],
-    "Stop": [{ "hooks": ["~/.claude/hooks/notify.sh"] }]
-  },
-
-  "mcp": {
-    "enabled": true,
-    "servers": {
-      "github": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
-      }
-    }
+    "PreToolUse": [{ "matcher": "Edit", "hooks": [{ "type": "command", "command": "~/.claude/hooks/eslint-fix.sh" }] }],
+    "PostToolUse": [{ "matcher": "Write", "hooks": [{ "type": "command", "command": "~/.claude/hooks/security-scan.sh" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "~/.claude/hooks/notify.sh" }] }]
   }
 }
 ```
+
+The GitHub MCP server for this setup goes in `.mcp.json`, as shown above.
 
 ### Environment Variables
 
@@ -1740,7 +1720,7 @@ export MAX_THINKING_TOKENS=16000
 export CLAUDE_CODE_EFFORT_LEVEL=high
 
 # Feature toggles
-export CLAUDE_CODE_DISABLE_AUTO_MEMORY=true
+export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1    # Disable auto memory (no auto memory files are created or loaded)
 export CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=true
 export CLAUDE_CODE_DISABLE_CRON=1
 export CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=true
@@ -1748,7 +1728,7 @@ export CLAUDE_CODE_DISABLE_TERMINAL_TITLE=true
 export CLAUDE_CODE_DISABLE_1M_CONTEXT=true
 export CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK=true
 export CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false
-export CLAUDE_CODE_ENABLE_TASKS=true
+export CLAUDE_CODE_ENABLE_TASKS=0          # Task tools are the default; 0 reverts to the legacy TodoWrite tool
 export CLAUDE_CODE_SIMPLE=true              # Set by --bare flag
 
 # MCP configuration
@@ -1789,23 +1769,28 @@ The `/config` command provides an interactive menu to toggle settings such as:
 
 ### Per-Project Configuration
 
-Create `.claude/config.json` in your project:
+Create `.claude/settings.json` in your project:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [{ "matcher": "Bash", "hooks": ["npm test && npm run lint"] }]
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "npm test && npm run lint" }] }]
   },
   "permissions": {
-    "mode": "default"
-  },
-  "mcp": {
-    "servers": {
-      "project-db": {
-        "command": "mcp-postgres",
-        "env": {
-          "DATABASE_URL": "${PROJECT_DB_URL}"
-        }
+    "defaultMode": "manual"
+  }
+}
+```
+
+Put the project's MCP servers in `.mcp.json` at the project root:
+
+```json
+{
+  "mcpServers": {
+    "project-db": {
+      "command": "mcp-postgres",
+      "env": {
+        "DATABASE_URL": "${PROJECT_DB_URL}"
       }
     }
   }
@@ -1873,6 +1858,29 @@ For more information about Claude Code and related features:
 
 ---
 
-**Cập Nhật Lần Cuối**: Tháng 4 năm 2026
-**Phiên Bản Claude Code**: 2.1+
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/permissions
+- https://code.claude.com/docs/en/auto-mode-classifier-billing
+- https://code.claude.com/docs/en/keybindings#modifiers
+- https://code.claude.com/docs/en/permission-modes
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.283
+- https://code.claude.com/docs/en/permission-modes#which-mode-a-session-starts-in
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.284
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.285
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/changelog#2-1-300
+- https://code.claude.com/docs/en/sandboxing
+- https://code.claude.com/docs/en/settings-reference#sandbox-enabled
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/interactive-mode
+- https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/channels
+- https://code.claude.com/docs/en/desktop
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/env-vars
+- https://code.claude.com/docs/en/changelog#2-1-302
 **Các Mô Hình Tương Thích**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

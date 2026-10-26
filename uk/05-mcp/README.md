@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # MCP (Model Context Protocol)
@@ -109,6 +109,28 @@ claude mcp add --transport stdio myserver --env KEY=value -- npx server
 claude mcp add --transport sse legacy-server https://example.com/sse
 ```
 
+### WebSocket-транспорт (`ws`)
+
+WebSocket-сервери тримають постійне двонаправлене зʼєднання, що підходить віддаленим MCP-серверам, які надсилають події до Claude без запиту. Використовуйте HTTP, якщо ваш сервер лише відповідає на запити, оскільки HTTP підтримує OAuth і прапорець `claude mcp add --transport`, а WebSocket — жодного з них.
+
+Оскільки `--transport` не приймає `ws`, налаштуйте його в `.mcp.json` або через `claude mcp add-json`:
+
+```json
+{
+  "type": "ws",
+  "url": "wss://mcp.example.com/socket",
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN"
+  }
+}
+```
+
+Запис `type: "ws"` приймає ті самі поля `url`, `headers`, `headersHelper`, `timeout` і `alwaysLoad`, що й `http`. Автентифікація **лише через заголовки** — потоку OAuth для WebSocket-серверів немає.
+
+> **Примітка**: Починаючи з v2.1.285, `claude mcp list` показує WebSocket-сервери (`ws`) з їхньою URL-адресою та станом справності (попередні версії їх пропускали). Також їх можна перевірити через `claude mcp get <назва>` або панель `/mcp`.
+
+Як і HTTP та SSE, WebSocket-зʼєднання використовує 5-хвилинне вікно простою; stdio і WebSocket не мають таймера на окремий запит. Запис `url` без `type` призводить до помилки, яка називає `"http"`, `"sse"`, `"ws"` як допустимі значення.
+
 ### Примітка для Windows
 
 На нативній Windows (не WSL) використовуйте `cmd /c` для команд npx:
@@ -198,16 +220,17 @@ sequenceDiagram
 
 ## Пошук інструментів MCP
 
-Коли описи інструментів MCP перевищують 10% контекстного вікна, Claude Code автоматично вмикає пошук інструментів для ефективного вибору правильних інструментів без перевантаження контексту моделі.
+Пошук інструментів увімкнено за замовчуванням: інструменти MCP відкладаються й знаходяться за потреби, тож їхні визначення не заповнюють контекст моделі. Claude Code вимикає його, коли `ANTHROPIC_BASE_URL` вказує на хост, що не належить Anthropic (не first-party), оскільки більшість проксі не пересилають потрібні йому блоки.
 
 | Налаштування | Значення | Опис |
 |-------------|----------|------|
-| `ENABLE_TOOL_SEARCH` | `auto` (за замовч.) | Автоматично вмикається, коли описи інструментів перевищують 10% контексту |
-| `ENABLE_TOOL_SEARCH` | `auto:<N>` | Автоматично вмикається при користувацькому порозі `N` інструментів |
-| `ENABLE_TOOL_SEARCH` | `true` | Завжди увімкнено незалежно від кількості інструментів |
+| `ENABLE_TOOL_SEARCH` | (не задано — за замовч.) | Усі інструменти MCP відкладаються й завантажуються за потреби |
+| `ENABLE_TOOL_SEARCH` | `auto` | Пороговий режим: інструменти завантажуються одразу, доки їхні визначення не досягнуть 10% контекстного вікна, після чого всі відкладаються |
+| `ENABLE_TOOL_SEARCH` | `auto:<N>` | Пороговий режим із власним відсотком (0-100) — наприклад, `auto:5` для 5% |
+| `ENABLE_TOOL_SEARCH` | `true` | Усі інструменти MCP відкладаються |
 | `ENABLE_TOOL_SEARCH` | `false` | Вимкнено; всі описи інструментів надсилаються повністю |
 
-> **Примітка:** Пошук інструментів потребує Sonnet 4 або новіший, або Opus 4 або новіший. Моделі Haiku не підтримують пошук інструментів.
+> **Примітка:** Пошук інструментів потребує моделі з підтримкою блоків `tool_reference`: Claude Opus 4, Claude Sonnet 4, Claude Haiku 4.5 та новіших моделей (на Agent Platform від Google Cloud — Opus 4.5, Sonnet 4.5, Haiku 4.5 та новіших).
 
 ## Динамічне оновлення інструментів
 
@@ -223,7 +246,7 @@ MCP-сервери можуть запитувати структуровани�
 
 ## Ліміт описів інструментів та інструкцій
 
-Починаючи з v2.1.84, Claude Code встановлює **ліміт 2 КБ** на описи та інструкції інструментів для кожного MCP-сервера. Це запобігає споживанню надмірного контексту окремими серверами з занадто багатослівними визначеннями інструментів.
+Claude Code обрізає кожен опис MCP-інструмента та інструкції кожного сервера, щоб багатослівні сервери не роздували контекст. Типові ліміти: **4 096 символів** для інструкцій сервера та описів інструментів, що завантажуються одразу (v2.1.296; до того — 2 048 починаючи з v2.1.84), і **16 384 символи** для описів, які Claude завантажує через tool search (v2.1.295). З v2.1.280 їх перевизначає `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`: задане число замінює **обидва** ліміти (`8192` підвищує коротший і знижує довший). З v2.1.299 описи й інструкції від first-party MCP-серверів Anthropic на `api.anthropic.com` доходять до Claude повністю. Розміщуйте важливі деталі ближче до початку опису.
 
 ## MCP Prompts як слеш-команди
 
@@ -259,11 +282,22 @@ MCP-сервери можуть надавати промпти, що відоб
 
 Конфігурації MCP можна зберігати на різних рівнях з різним ступенем поширення:
 
-| Рівень | Розташування | Опис | Доступний для | Потребує підтвердження |
-|--------|-------------|------|---------------|----------------------|
-| **Local** (за замовч.) | `~/.claude.json` (під шляхом проєкту) | Приватний для поточного користувача, лише поточний проєкт (раніше називався `project`) | Лише ви | Ні |
-| **Project** | `.mcp.json` | Комітиться в git-репозиторій | Члени команди | Так (при першому використанні) |
-| **User** | `~/.claude.json` | Доступний у всіх проєктах (раніше називався `global`) | Лише ви | Ні |
+| Рівень | Прапорець | Розташування | Опис | Доступний для | Потребує підтвердження |
+|--------|-----------|-------------|------|---------------|----------------------|
+| **Local** (за замовч.) | `--scope local` | `~/.claude.json` (під шляхом проєкту) | Приватний для поточного користувача, лише поточний проєкт (раніше називався `project`) | Лише ви | Ні |
+| **Project** | `--scope project` | `.mcp.json` | Комітиться в git-репозиторій | Члени команди | Так (при першому використанні) |
+| **User** | `--scope user` | `~/.claude.json` | Доступний у всіх проєктах (раніше називався `global`) | Лише ви | Ні |
+
+Обирайте рівень при додаванні сервера через `--scope` (коротка форма `-s`). Якщо
+прапорець не вказано, Claude Code використовує `local`:
+
+```bash
+# Рівень project — записує в .mcp.json, щоб конфігурацію бачила вся команда
+claude mcp add --scope project --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
+
+# Рівень user — доступний у кожному проєкті
+claude mcp add --scope user --transport stdio memory -- npx @modelcontextprotocol/server-memory
+```
 
 ### Використання рівня Project
 
@@ -274,7 +308,10 @@ MCP-сервери можуть надавати промпти, що відоб
   "mcpServers": {
     "github": {
       "type": "http",
-      "url": "https://api.github.com/mcp"
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
     }
   }
 }
@@ -288,7 +325,7 @@ MCP-сервери можуть надавати промпти, що відоб
 
 ```bash
 # Додати HTTP-сервер
-claude mcp add --transport http github https://api.github.com/mcp
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 
 # Додати локальний stdio-сервер
 claude mcp add --transport stdio database -- npx @company/db-server
@@ -307,7 +344,12 @@ claude mcp reset-project-choices
 
 # Імпорт з Claude Desktop
 claude mcp add-from-claude-desktop
+
+# Додати сервер із JSON-блоку (зручно для скриптового налаштування)
+claude mcp add-json events-server '{"type":"stdio","command":"npx","args":["@modelcontextprotocol/server-events"]}'
 ```
+
+> **Примітка**: у JSON-конфігураціях — `.mcp.json`, `~/.claude.json` або `claude mcp add-json` — поле `type` приймає `streamable-http` як аліас для `http`. Специфікація MCP називає цей транспорт `streamable-http`, тому конфігурації, скопійовані з документації самого сервера, працюють без змін.
 
 ## Таблиця доступних MCP-серверів
 
@@ -332,10 +374,10 @@ claude mcp add-from-claude-desktop
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -384,9 +426,9 @@ Reviewers: @bob, @charlie
 
 **Налаштування**:
 ```bash
-export GITHUB_TOKEN="your_github_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_token"
 # Або додайте через CLI:
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
 ### Підстановка змінних оточення в конфігурації
@@ -416,7 +458,7 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 ```
 
 Змінні розгортаються під час виконання:
-- `${VAR}` — використовує змінну оточення, помилка якщо не встановлена
+- `${VAR}` — використовує змінну оточення; якщо вона не встановлена (і немає значення за замовчуванням), сервер все одно завантажується з буквальним `${VAR}`, а `claude mcp list` і `/mcp` попереджають про відсутню змінну
 - `${VAR:-default}` — використовує змінну оточення, резервне значення якщо не встановлена
 
 ### Приклад 2: Налаштування Database MCP
@@ -428,10 +470,7 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
   "mcpServers": {
     "database": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-database"],
-      "env": {
-        "DATABASE_URL": "postgresql://user:pass@localhost/mydb"
-      }
+      "args": ["-y", "@bytebase/dbhub", "--dsn", "${DATABASE_URL}"]
     }
   }
 }
@@ -461,9 +500,47 @@ ORDER BY order_count DESC;
 **Налаштування**:
 ```bash
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-# Або додайте через CLI:
-claude mcp add --transport stdio database -- npx @modelcontextprotocol/server-database
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --dsn "$DATABASE_URL"
 ```
+
+> **Warning**: Таке налаштування дає Claude право запису. Інструмент DBHub `execute_sql` виконує будь-який SQL, зокрема `UPDATE`, `DELETE` і `DROP`, якщо не ввімкнути режим лише для читання. Використовуйте локальну або тестову базу даних, а не продакшн.
+
+**Налаштування лише для читання (рекомендовано):**
+
+Створіть користувача бази даних, який може виконувати лише `SELECT` (приклад для PostgreSQL):
+
+```sql
+CREATE ROLE claude_readonly LOGIN PASSWORD 'change-me';
+GRANT CONNECT ON DATABASE mydb TO claude_readonly;
+GRANT USAGE ON SCHEMA public TO claude_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO claude_readonly;
+```
+
+Увімкніть режим лише для читання у файлі `dbhub.toml`. Старий прапорець `--readonly` більше не працює. DBHub підставляє `${DATABASE_URL}` зі змінних середовища, тож облікові дані у файл не потрапляють:
+
+```toml
+[[sources]]
+id = "default"
+dsn = "${DATABASE_URL}"
+
+[[tools]]
+name = "execute_sql"
+source = "default"
+readonly = true
+```
+
+Потім передайте DBHub цей файл замість `--dsn`. Спершу видаліть сервер `database` із правом запису, який ви додали вище, бо Claude Code не додасть другий сервер із тим самим іменем:
+
+```bash
+# Замінюємо сервер із правом запису, доданий вище
+claude mcp remove database
+export DATABASE_URL="postgresql://claude_readonly:change-me@localhost/mydb"
+claude mcp add --transport stdio database -- npx -y @bytebase/dbhub \
+  --config "$PWD/dbhub.toml"
+```
+
+Режим лише для читання перевіряє текст SQL, і його вже вдавалося обійти (виправлено в DBHub 0.22.6), тому справжній захист даних дає саме користувач із правом лише `SELECT`. Докладніше: [режим лише для читання в DBHub](https://dbhub.ai/tools/execute-sql#read-only-mode).
 
 ### Приклад 3: Мульти-MCP воркфлов
 
@@ -566,9 +643,10 @@ sequenceDiagram
 
 ```bash
 # ~/.bashrc або ~/.zshrc
-export GITHUB_TOKEN="ghp_xxxxxxxxxxxxx"
+export GITHUB_PERSONAL_ACCESS_TOKEN="ghp_xxxxxxxxxxxxx"
 export DATABASE_URL="postgresql://user:pass@localhost/mydb"
-export SLACK_TOKEN="xoxb-xxxxxxxxxxxxx"
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 ```
 
 Потім посилайтесь на них у конфігурації MCP:
@@ -576,7 +654,7 @@ export SLACK_TOKEN="xoxb-xxxxxxxxxxxxx"
 ```json
 {
   "env": {
-    "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
   }
 }
 ```
@@ -600,42 +678,61 @@ claude mcp add --transport stdio claude-agent -- claude mcp serve
 
 ## Managed MCP Configuration (Enterprise)
 
-Для корпоративних розгортань IT-адміністратори можуть застосовувати політики MCP-серверів через конфігураційний файл `managed-mcp.json`. Цей файл забезпечує ексклюзивний контроль над дозволеними або заблокованими MCP-серверами на рівні організації.
+Для корпоративних розгортань IT-адміністратори застосовують політику MCP-серверів через два окремі механізми: файл `managed-mcp.json`, який розгортає фіксований набір серверів з ексклюзивним контролем, і ключі налаштувань `allowedMcpServers` / `deniedMcpServers`, які фільтрують, яким із налаштованих серверів дозволено завантажитись.
 
 **Розташування:**
 - macOS: `/Library/Application Support/ClaudeCode/managed-mcp.json`
-- Linux: `~/.config/ClaudeCode/managed-mcp.json`
-- Windows: `%APPDATA%\ClaudeCode\managed-mcp.json`
+- Linux і WSL: `/etc/claude-code/managed-mcp.json`
+- Windows: `C:\Program Files\ClaudeCode\managed-mcp.json`
 
-**Функції:**
-- `allowedMcpServers` — білий список дозволених серверів
-- `deniedMcpServers` — чорний список заборонених серверів
-- Підтримує зіставлення за назвою сервера, командою та URL-патернами
-- Загальноорганізаційні політики MCP застосовуються перед конфігурацією користувача
-- Запобігає неавторизованим підключенням серверів
+`managed-mcp.json` використовує той самий формат, що й проєктний `.mcp.json` — мапу `mcpServers` на верхньому рівні. Він розгортає сервери, а не фільтрує їх:
+
+```json
+{
+  "mcpServers": {
+    "example-remote": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp"
+    },
+    "company-internal": {
+      "type": "stdio",
+      "command": "/usr/local/bin/company-mcp-server",
+      "args": ["--config", "/etc/company/mcp-config.json"]
+    }
+  }
+}
+```
+
+Цей файл може прочитати будь-який користувач машини, тож ніколи не зберігайте облікові дані у блоці `env`. Використовуйте розгортання `${VAR}`, OAuth або `headersHelper`.
+
+**Фільтрація: списки дозволених і заборонених**
+
+`allowedMcpServers` і `deniedMcpServers` — це **ключі налаштувань, а не поля `managed-mcp.json`**. Щоб вони мали примусову дію, розміщуйте їх у керованому джерелі налаштувань: server-managed settings, `managed-settings.json`, MDM-профілі або реєстрі.
+
+- `allowedMcpServers` — список дозволених серверів. Задайте поруч, у тому самому керованому джерелі, `allowManagedMcpServersOnly: true`, інакше списки дозволених зливаються з усіх областей і користувач зможе розширити ваш.
+- `deniedMcpServers` — список заблокованих серверів. Зливається з усіх областей у будь-якому разі.
+
+Кожен запис — це об'єкт з **одним** ключем:
+
+| Ключ | Що зіставляє |
+|------|--------------|
+| `serverUrl` | URL віддаленого сервера, точний або з шаблонами `*` |
+| `serverCommand` | Точну команду та аргументи запуску stdio-сервера, у вигляді масиву — кожен аргумент, за порядком |
+| `serverName` | Призначену користувачем назву. **Лише точний збіг; шаблони не розгортаються** |
 
 **Приклад конфігурації:**
 
 ```json
 {
   "allowedMcpServers": [
-    {
-      "serverName": "github",
-      "serverUrl": "https://api.github.com/mcp"
-    },
-    {
-      "serverName": "company-internal",
-      "serverCommand": "company-mcp-server"
-    }
+    { "serverUrl": "https://mcp.example.com/*" },
+    { "serverCommand": ["/usr/local/bin/company-mcp-server", "--config", "/etc/company/mcp-config.json"] }
   ],
   "deniedMcpServers": [
-    {
-      "serverName": "untrusted-*"
-    },
-    {
-      "serverUrl": "http://*"
-    }
-  ]
+    { "serverName": "untrusted-server" },
+    { "serverUrl": "http://*" }
+  ],
+  "allowManagedMcpServersOnly": true
 }
 ```
 
@@ -670,6 +767,8 @@ MCP-сервери можна визначати вбудовано у фрон�
 
 ```yaml
 ---
+name: my-tool-agent
+description: Uses my-tool for specialized operations
 mcpServers:
   my-tool:
     type: http
@@ -688,7 +787,7 @@ Claude Code встановлює ліміти на вивід інструмен
 | Ліміт | Поріг | Поведінка |
 |-------|-------|----------|
 | **Попередження** | 10 000 токенів | Відображається попередження про великий вивід |
-| **Максимум за замовч.** | 25 000 токенів | Вивід обрізається за цим лімітом |
+| **Максимум за замовч.** | 25 000 токенів | Більший вивід зберігається у файл, а в розмову потрапляє шлях до файлу |
 | **Збереження на диск** | 50 000 символів | Результати інструментів, що перевищують 50K символів, зберігаються на диск |
 
 Максимальний ліміт виводу налаштовується через змінну оточення `MAX_MCP_OUTPUT_TOKENS`:
@@ -961,7 +1060,7 @@ MCPorter доповнює підхід з виконанням коду, опи�
 
 1. **Додайте перший MCP-сервер** через CLI (приклад: GitHub):
 ```bash
-claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 ```
 
    Або створіть файл `.mcp.json` у корені проєкту:
@@ -969,10 +1068,10 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 {
   "mcpServers": {
     "github": {
-      "command": "npx",
-      "args": ["@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   }
@@ -981,7 +1080,7 @@ claude mcp add --transport stdio github -- npx @modelcontextprotocol/server-gith
 
 2. **Встановіть змінні оточення:**
 ```bash
-export GITHUB_TOKEN="your_github_personal_access_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_github_personal_access_token"
 ```
 
 3. **Протестуйте підключення:**
@@ -1004,7 +1103,7 @@ npm install -g @modelcontextprotocol/server-github
 
 **Database MCP:**
 ```bash
-npm install -g @modelcontextprotocol/server-database
+npm install -g @bytebase/dbhub
 ```
 
 **Filesystem MCP:**
@@ -1012,7 +1111,7 @@ npm install -g @modelcontextprotocol/server-database
 npm install -g @modelcontextprotocol/server-filesystem
 ```
 
-**Slack MCP:**
+**Slack MCP (застарілий пакет):**
 ```bash
 npm install -g @modelcontextprotocol/server-slack
 ```
@@ -1031,10 +1130,10 @@ npm install -g @modelcontextprotocol/server-github
 ### Помилка автентифікації
 ```bash
 # Перевірте, чи встановлена змінна оточення
-echo $GITHUB_TOKEN
+echo $GITHUB_PERSONAL_ACCESS_TOKEN
 
 # Перевстановіть, якщо потрібно
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 
 # Перевірте дозволи токена
 # Дозволи GitHub-токена: https://github.com/settings/tokens
@@ -1081,6 +1180,15 @@ export GITHUB_TOKEN="your_token"
 - [Документація Claude API](https://docs.anthropic.com)
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/mcp#configure-tool-search
+- https://code.claude.com/docs/en/managed-mcp
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.285
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.296
+- https://code.claude.com/docs/en/mcp#tool-search-for-mcp-server-authors
+- https://code.claude.com/docs/en/mcp#environment-variable-expansion-in-mcp-json
+- https://code.claude.com/docs/en/sub-agents
 **Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # 风格指南
@@ -391,6 +391,8 @@ ls .claude/commands/
 - `sequenceDiagram` - 交互流程
 - `timeline` - 时间顺序
 
+GitHub 会原生渲染 Mermaid。网站和 EPUB 使用 [Pele](https://github.com/obsidianmd/pele)（版本固定在 `scripts/vendor_assets.py` 中）渲染同一份源码，pre-commit 的 `mermaid-syntax` hook 也用同一个包校验每个代码块，所以通过 hook 的代码块在各处都能正常显示。
+
 ### 样式约定
 
 使用 style block 保持颜色一致：
@@ -419,6 +421,8 @@ graph TB
 
 - 节点标签使用 `["Label text"]`，这样可以包含特殊字符
 - 在标签中换行使用 `<br/>`
+- 标签使用纯文本，编号标签按原样书写（`["1. Load file"]`，句点前不要加反斜杠）
+- 不要依赖 `%%{init}%%` 指令或 Mermaid 主题：网站会应用自己的浅色和深色配色
 - 图表保持简洁，最多 10-12 个节点
 - 图表下方添加简短文字说明，方便无障碍阅读
 - 层级结构使用自上而下（`TB`），流程使用左右（`LR`）
@@ -597,12 +601,13 @@ docs(skills): Add comprehensive code review skill
 
 ```markdown
 ---
-**Last Updated**: March 2026
-**Claude Code Version**: 2.1.97
+**Last Updated**: August 2026
+**Claude Code Version**: 2.1.245
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
 ```
 
-- 使用“月份 + 年份”格式，例如 “March 2026”
+- 使用“月份 + 年份”格式，例如 “August 2026”
+- 使用当前同步运行捕获的版本号，而非此处示例中显示的值
 - 功能变化时更新版本
 - 列出所有兼容模型
 
@@ -628,3 +633,10 @@ docs(skills): Add comprehensive code review skill
 - [ ] 段落简短且聚焦
 - [ ] 相关指南章节链接到合适的课程
 - [ ] 提交信息符合 conventional commits 格式
+
+---
+
+**最后更新**: 2026 年 8 月 25 日
+**Claude Code 版本**: 2.1.245
+**来源**:
+- https://code.claude.com/docs/en/overview

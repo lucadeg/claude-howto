@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Checkpoints và Rewind / Checkpoints and Rewind
@@ -33,7 +33,7 @@ Bạn có thể truy cập và quản lý checkpoints theo hai cách chính:
 Nhấn `Esc` hai lần (`Esc` + `Esc`) để mở giao diện checkpoint và duyệt các checkpoints đã lưu.
 
 ### Sử Dụng Lệnh Slash / Using Slash Command
-Sử dụng lệnh `/rewind` (bí danh: `/checkpoint`) để truy cập nhanh:
+Sử dụng lệnh `/rewind` (bí danh: `/checkpoint`, `/undo`) để truy cập nhanh:
 
 ```bash
 # Mở giao diện rewind
@@ -58,7 +58,7 @@ Khi bạn rewind, bạn được trình bày một menu năm tùy chọn:
 Claude Code tự động tạo checkpoints cho bạn:
 
 - **Mọi prompt người dùng** - Một checkpoint mới được tạo với mỗi đầu vào người dùng
-- **Liên tục** - Checkpoints tồn tại qua các phiên
+- **Liên tục** - Checkpoints được lưu cùng cuộc hội thoại, nên `/rewind` vẫn hoạt động sau khi bạn tiếp tục (resume) một phiên
 - **Tự động dọn dẹp** - Checkpoints được tự động dọn dẹp sau 30 ngày
 
 Điều này có nghĩa là bạn luôn có thể rewind đến bất kỳ điểm nào trước đó trong hội thoại của bạn, từ vài phút trước đến nhiều ngày trước.
@@ -207,15 +207,21 @@ Vì checkpoints được tạo tự động, bạn có thể tập trung vào c�
 
 ## Cấu Hình / Configuration
 
-Bạn có thể bật/tắt checkpoints tự động trong settings của bạn:
+Hai setting chi phối hành vi checkpoint — có chụp snapshot hay không, và giữ chúng bao lâu:
 
 ```json
 {
-  "autoCheckpoint": true
+  "fileCheckpointingEnabled": true,
+  "cleanupPeriodDays": 30
 }
 ```
 
-- `autoCheckpoint`: Bật hoặc tắt tạo checkpoint tự động trên mọi prompt người dùng (mặc định: `true`)
+| Setting | Mặc Định | Tác Dụng |
+|---------|---------|--------|
+| `fileCheckpointingEnabled` | `true` | Chụp snapshot file trước mỗi lần chỉnh sửa để `/rewind` có thể khôi phục. Yêu cầu v2.1.119+. Hiển thị trong `/config` dưới tên **Rewind code (checkpoints)**. Biến môi trường tương đương: `CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING` |
+| `cleanupPeriodDays` | `30` | Số ngày giữ lịch sử phiên và checkpoints |
+
+Claude Code giữ snapshot cho **100 checkpoint gần nhất**; các checkpoint cũ hơn bị loại bỏ ngay cả khi còn trong thời hạn lưu giữ.
 
 ## Hạn Chế / Limitations
 
@@ -233,7 +239,7 @@ Checkpoints có các hạn chế sau:
 
 **Giải Pháp**:
 - Kiểm tra nếu checkpoints đã bị xóa
-- Xác minh rằng `autoCheckpoint` được bật trong settings của bạn
+- Xác minh rằng `fileCheckpointingEnabled` được bật trong settings của bạn
 - Kiểm tra dung lượng đĩa
 
 ### Rewind Thất Bại / Rewind Failed
@@ -277,7 +283,7 @@ Sử dụng cả hai cùng nhau:
 
 - **`Esc` + `Esc`** - Mở trình duyệt checkpoint
 - **`/rewind`** - Cách thay thế để truy cập checkpoints
-- **`/checkpoint`** - Bí danh cho `/rewind`
+- **`/checkpoint`**, **`/undo`** - Bí danh cho `/rewind`
 
 ## Biết Khi Nào Rewind: Giám Sát Ngữ Cảnh / Knowing When to Rewind: Context Monitoring
 
@@ -300,6 +306,9 @@ Checkpoints cho phép bạn quay lại — nhưng làm thế nào bạn biết *
 
 ---
 
-**Cập Nhật Lần Cuối**: Tháng 4 năm 2026
-**Phiên Bản Claude Code**: 2.1+
+**Cập Nhật Lần Cuối**: Ngày 15 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.300
+**Nguồn**:
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/commands
 **Các Mô Hình Tương Thích**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

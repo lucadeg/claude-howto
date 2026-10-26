@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Hướng Dẫn Agent Skills
@@ -92,7 +92,7 @@ sequenceDiagram
 | **Project** | `.claude/skills/<skill-name>/SKILL.md` | Đội | Có (qua git) | Tiêu chuẩn đội |
 | **Plugin** | `<plugin>/skills/<skill-name>/SKILL.md` | Nơi được bật | Phụ thuộc | Được gói với plugins |
 
-Khi skills chia sẻ cùng tên qua các cấp, vị trí ưu tiên cao hơn thắng: **enterprise > personal > project**. Plugin skills sử dụng namespace `plugin-name:skill-name`, vì vậy chúng không thể xung đột.
+Khi skills chia sẻ cùng tên qua các cấp, vị trí ưu tiên cao hơn thắng: **enterprise > personal > project**. Khi cùng tên tồn tại trong `~/.claude/skills/` và `.claude/skills/`, skill cá nhân sẽ chạy. Setting `skillOverrides` (v2.1.129+) chỉ điều chỉnh khả năng hiển thị của từng skill (`on`, `name-only`, `user-invocable-only`, `off`), không thay đổi thứ tự ưu tiên, và không ảnh hưởng đến plugin skills. Plugin skills sử dụng namespace `plugin-name:skill-name`, vì vậy chúng không thể xung đột.
 
 ### Khám Phá Tự Động
 
@@ -100,7 +100,7 @@ Khi skills chia sẻ cùng tên qua các cấp, vị trí ưu tiên cao hơn th�
 
 **Thư mục `--add-dir`**: Skills từ các thư mục được thêm qua `--add-dir` được tải tự động với phát hiện thay đổi trực tiếp. Bất kỳ chỉnh sửa nào cho các file skill trong các thư mục đó có hiệu lực ngay lập tức mà không cần khởi động lại Claude Code.
 
-**Ngân sách description**: Các mô tả Skill (metadata cấp 1) được giới hạn ở **2% của cửa sổ bối cảnh** (fallback: **16,000 ký tự**). Nếu bạn có nhiều skills được cài đặt, một số có thể bị loại bỏ. Chạy `/context` để kiểm tra các cảnh báo. Ghi đè ngân sách với biến môi trường `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
+**Ngân sách description**: Các mô tả Skill (metadata cấp 1) được giới hạn ở **1% của cửa sổ bối cảnh** (fallback: **8,000 ký tự**). Nếu bạn có nhiều skills được cài đặt, một số có thể bị loại bỏ. Chạy `/context` để kiểm tra các cảnh báo. Ghi đè ngân sách với biến môi trường `SLASH_COMMAND_TOOL_CHAR_BUDGET`.
 
 ## Tạo Skills Tùy Chỉnh
 
@@ -133,10 +133,12 @@ Cung cấp hướng dẫn rõ ràng, từng bước cho Claude.
 Hiển thị các ví dụ cụ thể về việc sử dụng Skill này.
 ```
 
-### Các Trường Bắt Buộc
+### Các Trường Khuyến Nghị
 
-- **name**: chỉ chữ thường, số, gạch ngang (tối đa 64 ký tự). Không thể chứa "anthropic" hoặc "claude".
-- **description**: những gì Skill làm VÀ khi nào sử dụng nó (tối đa 1024 ký tự). Điều này quan trọng để Claude biết khi nào kích hoạt skill.
+- **description** (khuyến nghị): những gì Skill làm VÀ khi nào sử dụng nó. Nếu bỏ trống, Claude Code dùng dòng không trống đầu tiên của nội dung markdown. Nội dung `description` + `when_to_use` gộp lại bị cắt ở **1.536 ký tự** trong danh sách skill (có thể điều chỉnh qua `skillListingMaxDescChars`). Đây là nội dung Claude đối chiếu để quyết định khi nào kích hoạt skill.
+- **name** (tùy chọn): mặc định lấy theo **tên thư mục** của skill. Khi được khai báo, nó đặt tên hiển thị — chỉ chữ thường, số, gạch ngang (tối đa 64 ký tự) là dạng được khuyến nghị và có tính di động (bắt buộc với claude.ai và Skills API). Bản thân Claude Code (v2.1.299+) bỏ qua một skill hoặc lệnh có tên chứa ký tự ẩn, ký tự đổi hướng văn bản hoặc ký tự giống khoảng trắng, `<` hoặc `>`, hoặc dài quá 256 ký tự, cho đến khi bạn đổi tên nó. Trong Claude Code, `anthropic-skills` và `synced` là tên dành riêng và không được tải bên ngoài plugin; quy tắc chặt hơn cấm "anthropic" hoặc "claude" áp dụng cho các skill được tải lên claude.ai hoặc Skills API. Với skill trong plugin, `name` cũng đặt phân đoạn cuối của lệnh.
+
+Mọi trường frontmatter trong SKILL.md đều là tùy chọn; `description` là trường duy nhất được khuyến nghị.
 
 ### Các Trường Frontmatter Tùy Chọn
 
@@ -147,13 +149,13 @@ description: What this skill does and when to use it
 argument-hint: "[filename] [format]"        # Gợi ý cho autocomplete
 disable-model-invocation: true              # Chỉ người dùng có thể gọi
 user-invocable: false                       # Ẩn từ menu slash
-allowed-tools: Read, Grep, Glob             # Hạn chế truy cập công cụ
+allowed-tools: Read, Grep, Glob             # Phê duyệt trước các công cụ này (không hỏi quyền) khi skill chạy
 model: opus                                 # Mô hình cụ thể để sử dụng
 effort: high                                # Ghi đè mức nỗ lực (low, medium, high, max)
 context: fork                               # Chạy trong tác nhân con cô lập
 agent: Explore                              # Loại tác nhân nào (với context: fork)
 shell: bash                                 # Shell cho các lệnh: bash (mặc định) hoặc powershell
-hooks:                                      # Hooks theo phạm vi skill
+hooks:                                      # Hooks được đăng ký khi skill được gọi
   PreToolUse:
     - matcher: "Bash"
       hooks:
@@ -164,8 +166,9 @@ hooks:                                      # Hooks theo phạm vi skill
 
 | Trường | Mô Tả |
 |-------|-------------|
-| `name` | Chỉ chữ thường, số, gạch ngang (tối đa 64 ký tự). Không thể chứa "anthropic" hoặc "claude". |
-| `description` | Những gì Skill làm VÀ khi nào sử dụng nó (tối đa 1024 ký tự). Quan trọng cho phù hợp kích hoạt tự động. |
+| `name` | Khuyến nghị (di động): chỉ chữ thường, số, gạch ngang (tối đa 64 ký tự). `anthropic-skills` và `synced` là tên dành riêng trong Claude Code. |
+| `description` | Những gì Skill làm VÀ khi nào sử dụng nó. Nội dung `description` + `when_to_use` gộp lại bị cắt ở 1.536 ký tự trong danh sách skill (có thể điều chỉnh qua `skillListingMaxDescChars`). Quan trọng cho phù hợp kích hoạt tự động. |
+| `when_to_use` | Bối cảnh bổ sung về thời điểm Claude nên gọi skill. Được nối vào `description` trong danh sách skill và tính vào giới hạn 1.536 ký tự. |
 | `argument-hint` | Gợi ý hiển thị trong menu autocomplete `/` (ví dụ: `"[filename] [format]"`). |
 | `disable-model-invocation` | `true` = chỉ người dùng có thể gọi qua `/name`. Claude sẽ không bao giờ tự gọi. |
 | `user-invocable` | `false` = ẩn từ menu `/`. Chỉ Claude có thể gọi nó tự động. |
@@ -175,7 +178,7 @@ hooks:                                      # Hooks theo phạm vi skill
 | `context` | `fork` để chạy skill trong bối cảnh tác nhân con được fork với cửa sổ bối cảnh riêng. |
 | `agent` | Loại tác nhân con khi `context: fork` (ví dụ: `Explore`, `Plan`, `general-purpose`). |
 | `shell` | Shell được sử dụng cho các thay thế `` !`command` `` và scripts: `bash` (mặc định) hoặc `powershell`. |
-| `hooks` | Hooks theo phạm vi vòng đời skill này (cùng định dạng với hooks toàn cục). |
+| `hooks` | Hooks được đăng ký khi skill được gọi (cùng định dạng với hooks trong settings; mọi sự kiện). Chúng vẫn hoạt động trong suốt phần còn lại của phiên. |
 
 ## Các Loại Nội Dung Skill
 
@@ -262,6 +265,8 @@ Chạy `/fix-issue 123` thay thế `$ARGUMENTS` bằng `123`.
 
 Cú pháp `` !`command` `` chạy các lệnh shell trước khi nội dung skill được gửi đến Claude:
 
+> **Lưu ý (v2.1.299)**: Hooks `UserPromptSubmit` chạy trước khi lệnh được mở rộng, nên một hook chặn prompt cũng sẽ ngăn các lệnh `!` này chạy.
+
 ```yaml
 ---
 name: pr-summary
@@ -307,7 +312,7 @@ agent: Explore
 
 ```yaml
 ---
-name: deep-research
+name: topic-research
 description: Research a topic thoroughly
 context: fork
 agent: Explore
@@ -406,7 +411,7 @@ Một skill tạo ra các hình ảnh hóa HTML tương tác:
 
 **File:** `~/.claude/skills/codebase-visualizer/SKILL.md`
 
-```yaml
+````yaml
 ---
 name: codebase-visualizer
 description: Generate an interactive collapsible tree visualization of your codebase. Use when exploring a new repo, understanding project structure, or identifying large files.
@@ -433,7 +438,7 @@ This creates `codebase-map.html` and opens it in your default browser.
 - **File sizes**: Displayed next to each file
 - **Colors**: Different colors for different file types
 - **Directory totals**: Shows aggregate size of each folder
-```
+````
 
 Script Python được gói thực hiện công việc nặng trong khi Claude xử lý điều phối.
 
@@ -490,11 +495,11 @@ description: Create or update CLAUDE.md files following best practices for optim
 
 ## Core Principles
 
-**LLMs are stateless**: CLAUDE.md is the only file automatically included in every conversation.
+**LLMs are stateless**: CLAUDE.md is the main project file loaded into every conversation (alongside auto memory and unscoped rules).
 
 ### The Golden Rules
 
-1. **Less is More**: Keep under 300 lines (ideally under 100)
+1. **Less is More**: Keep each CLAUDE.md under 200 lines
 2. **Universal Applicability**: Only include information relevant to EVERY session
 3. **Don't Use Claude as a Linter**: Use deterministic tools instead
 4. **Never Auto-Generate**: Craft it manually with careful consideration
@@ -529,7 +534,7 @@ refactor/
 
 ```yaml
 ---
-name: code-refactor
+name: refactor
 description: Systematic code refactoring based on Martin Fowler's methodology. Use when users ask to refactor code, improve code structure, reduce technical debt, or eliminate code smells.
 ---
 
@@ -611,7 +616,7 @@ Can you help me review this code for security issues?
 
 ### Cập Nhật Một Skill
 
-Chỉnh sửa file `SKILL.md` trực tiếp. Các thay đổi có hiệu lực vào lần khởi động Claude Code tiếp theo.
+Chỉnh sửa file `SKILL.md` trực tiếp, sau đó chạy `/reload-skills` (v2.1.152+) để quét lại các thư mục skill. Khởi động lại Claude Code cũng được nhưng không bắt buộc — skills trong thư mục `--add-dir` được nhận diện tức thời, và hook `SessionStart` trả về `reloadSkills: true` cũng kích hoạt lần quét lại tương tự.
 
 ```bash
 # Personal Skill
@@ -757,7 +762,7 @@ Claude Code được gửi với một số skills được tích hợp sẵn lu
 | `/simplify` | Review các file đã thay đổi để tái sử dụng, chất lượng, và hiệu quả; tạo ra 3 tác nhân review song song |
 | `/batch <instruction>` | Điều phối các thay đổi song song quy mô lớn qua codebase sử dụng git worktrees |
 | `/debug [description]` | Khắc phục sự cố phiên hiện tại bằng cách đọc debug log |
-| `/loop [interval] <prompt>` | Chạy prompt lặp lại trên khoảng thời gian (ví dụ: `/loop 5m check the deploy`) |
+| `/loop [interval] [prompt]` | Chạy prompt lặp lại trên khoảng thời gian (ví dụ: `/loop 5m check the deploy`) |
 | `/claude-api` | Tải tài liệu tham khảo Claude API/SDK; tự động kích hoạt trên các imports `anthropic`/`@anthropic-ai/sdk` |
 
 Các skills này có sẵn ngay lập tức và không cần được cài đặt hoặc cấu hình. Chúng theo cùng định dạng SKILL.md như các skills tùy chỉnh.
@@ -805,6 +810,17 @@ Khi bạn bắt đầu xây dựng skills một cách nghiêm túc, hai điều 
 
 ---
 
-**Cập Nhật Lần Cuối**: Tháng 4 năm 2026
-**Phiên Bản Claude Code**: 2.1+
-**Các Mô Hình Tương Thích**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/skills
+- https://code.claude.com/docs/en/hooks#hooks-in-skills-and-agents
+- https://code.claude.com/docs/en/skills#characters-a-skill-name-cant-hold
+- https://code.claude.com/docs/en/hooks#hook-lifecycle
+- https://code.claude.com/docs/en/changelog#2-1-299
+- https://code.claude.com/docs/en/skills#pre-approve-tools-for-a-skill
+- https://code.claude.com/docs/en/memory#write-effective-instructions
+- https://code.claude.com/docs/en/memory
+- https://code.claude.com/docs/en/settings-reference
+- https://code.claude.com/docs/en/commands
+**Các Mô Hình Tương Thích**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

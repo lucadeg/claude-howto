@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # 为 Claude How To 贡献内容
@@ -82,8 +82,9 @@ uv pip install -r scripts/requirements-dev.txt
 # Markdown lint 工具（Node.js）
 npm install -g markdownlint-cli
 
-# Mermaid 图表校验器（Node.js）
-npm install -g @mermaid-js/mermaid-cli
+# Mermaid 图表由 Pele 渲染，需要 Node.js >= 20（无需全局安装任何包）。
+# 检查版本：
+node --version
 
 # 安装 pre-commit 并启用 hooks
 uv pip install pre-commit
@@ -95,6 +96,8 @@ pre-commit install
 ```bash
 pre-commit run --all-files
 ```
+
+首次运行时会为 Mermaid hooks 下载 Node.js 22（由 pre-commit 提供，因此即使系统没有 Node.js 也能运行），并把固定版本的 Pele 包下载到 `scripts/.vendor-cache/pele/`；之后的运行可以离线完成。Mermaid hooks 以严格模式运行，如果 Pele 无法运行就会失败。如需在首次下载之前离线提交，可以用 `SKIP=mermaid,vietnamese-mermaid,japanese-mermaid` 跳过它们。
 
 每次提交都会运行这些 hooks：
 

@@ -1,5 +1,4 @@
 ---
-name: Generate README
 description: Створення або оновлення README проєкту
 ---
 
@@ -13,3 +12,11 @@ description: Створення або оновлення README проєкту
 4. Посилання на API-документацію
 5. Настанови для контриб'юторів
 6. Інформація про ліцензію
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

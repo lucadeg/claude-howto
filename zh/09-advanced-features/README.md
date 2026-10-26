@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # 高级功能
@@ -44,7 +44,7 @@ Claude Code 的高级功能把基础能力扩展到了规划、推理、自动�
 **核心高级功能包括：**
 - **Planning Mode**：先写详细实现计划，再开始编码
 - **Extended Thinking**：对复杂问题进行更深入的推理
-- **Auto Mode**：由后台安全分类器在每一步执行前进行审查（Research Preview）
+- **Auto Mode**：由后台安全分类器在每一步执行前进行审查
 - **Background Tasks**：长时间任务不阻塞对话
 - **Permission Modes**：控制 Claude 可以做什么（`default`、`acceptEdits`、`plan`、`auto`、`dontAsk`、`bypassPermissions`）
 - **Print Mode**：非交互式运行，适合自动化和 CI/CD（`claude -p`）
@@ -113,7 +113,7 @@ claude --permission-mode plan
 
 **快捷键：**
 - `Shift + Tab` - 切换权限模式（包括 plan）
-- `Alt + M` - 切换权限模式（Windows/Linux）
+- `Alt + M` - 切换权限模式（仅限 Windows，且运行时未启用 VT 输入模式时）
 
 ### Planning Mode 的好处
 
@@ -247,7 +247,7 @@ Recommendation
 <a id="auto-mode"></a>
 ## 自动模式
 
-Auto mode 是一个研究预览功能。它会在每个动作执行前，用后台安全分类器评估风险，帮助你在自动化和安全之间取得平衡。
+Auto mode 是一种权限模式，会在每个动作执行前用后台安全分类器评估风险，帮助你在自动化和安全之间取得平衡。所有套餐均可使用，但需要满足合格的模型和提供商条件。
 
 ### 需求
 
@@ -257,10 +257,11 @@ Auto mode 是一个研究预览功能。它会在每个动作执行前，用后�
 ### 启用方式
 
 ```bash
-# 用 CLI 解锁 auto mode
-claude --enable-auto-mode
+# 未配置权限模式时，交互式会话会以 auto mode 启动（v2.1.284+）
+# 如需显式选择它，例如当你的设置默认使用其他模式时：
+claude --permission-mode auto
 
-# 然后在 REPL 中用 Shift+Tab 切换到它
+# 或者在 REPL 中用 Shift+Tab 切换到它
 ```
 
 ### 分类器如何工作
@@ -470,7 +471,8 @@ echo "hello" | claude -p "translate to Chinese"
 
 - `/resume`
 - `/rename`
-- `/fork`
+- `/fork` — 把对话复制到一个新的独立后台会话（v2.1.212+）
+- `/subtask` — 派生一个继承完整对话的 forked subagent，完成后把结果返回本对话（v2.1.212+）
 - `claude -c`
 - `claude -r`
 
@@ -952,3 +954,11 @@ worktree 场景下依然可以配合工具和 hooks 自动化流程。
 - [Checkpoints 中文指南](../08-checkpoints/README.md)
 - [Plugins 中文指南](../07-plugins/README.md)
 - [CLI 中文参考](../10-cli/README.md)
+
+---
+
+**最后更新**: 2026 年 10 月 18 日
+**Claude Code 版本**: 2.1.302
+**来源**:
+- https://code.claude.com/docs/en/interactive-mode
+- https://code.claude.com/docs/en/permission-modes#which-mode-a-session-starts-in

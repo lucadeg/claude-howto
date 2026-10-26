@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Subagents 完整参考
@@ -43,7 +43,7 @@ tools: Read, Grep, Bash
 |------|------|
 | `name` | subagent 名称 |
 | `description` | 何时该调用它 |
-| `tools` | 允许使用的工具 |
+| `tools` | 允许使用的工具。MCP：`mcp__<server>__*` 授予整个服务器的工具（v2.1.299+：只匹配完全相同的服务器名） |
 | `model` | 指定模型 |
 | `prompt` | 任务提示词 |
 | `context` | 上下文策略 |
@@ -65,17 +65,21 @@ Claude Code 自带一些常见角色，例如：
 - 通用助手
 - Planning agent
 - Explore agent
-- Bash agent
+- claude 兜底 agent
 - Statusline 相关 agent
-- Claude Code Guide agent
+- claude-code-guide agent
 
 ## 管理 Subagents
 
 ### 使用 `/agents` 命令（推荐）
 
-```bash
-/agents
+> **注意**：`/agents` 交互式向导已在 v2.1.198 中移除，且自 v2.1.281 起 `/agents` 不再出现在 `/` 菜单或 `/help` 中。请让 Claude 创建或管理 subagent（例如“创建一个审查安全问题的 subagent”），或直接添加 `.claude/agents/<name>.md` 文件。
+
+```text
+创建一个审查代码安全漏洞的 subagent。
 ```
+
+Claude 会为你写好 `.claude/agents/<name>.md` 文件，并选择合适的 frontmatter（工具、模型、描述）。之后你可以手动调整该文件，或让 Claude 修改。
 
 ### 直接管理文件
 
@@ -111,9 +115,7 @@ mkdir -p ~/.claude/agents
 
 ### 列出可用 agents
 
-```bash
-claude agents
-```
+要查看已配置的 subagents，可以询问 Claude，或浏览 `.claude/agents/` 和 `~/.claude/agents/`。（`claude agents` 与此无关：它打开用于后台会话的 agent view。）
 
 ## 可恢复的 agents
 
@@ -176,7 +178,7 @@ Subagent 会在自己的上下文中读取对应记忆，不和主会话完全�
 
 ## `claude agents` CLI 命令
 
-用于查看和管理当前可用的 agent。
+`claude agents` 打开 **agent view**（v2.1.139+）：按状态分组的后台会话全屏列表。它不会列出已配置的 subagent 定义；可用 `claude agents --json` 以脚本方式读取会话状态。
 
 ## Agent Teams（实验性）
 
@@ -333,9 +335,14 @@ subagent 在隔离上下文里工作，但仍能把结果汇总回主会话。
 
 ### 方法 1：使用 `/agents`
 
-```bash
-/agents
+> **注意**：`/agents` 交互式向导已在 v2.1.198 中移除，且自 v2.1.281 起 `/agents` 不再出现在 `/` 菜单或 `/help` 中。请让 Claude 创建或管理 subagent（例如“创建一个审查安全问题的 subagent”），或直接添加 `.claude/agents/<name>.md` 文件。
+
+```text
+创建一个项目级 subagent，用于运行测试并修复失败。
+给它 Bash、Read、Edit 和 Grep 的访问权限。
 ```
+
+Claude 会写入带有合适 frontmatter 的 `.claude/agents/<name>.md`。检查生成的文件后即可使用。
 
 ### 方法 2：复制到项目
 
@@ -353,8 +360,9 @@ cp 04-subagents/*.md ~/.claude/agents/
 
 ### 验证
 
-- 运行 `/agents`
-- 检查对应 agent 是否出现在列表中
+- 让 Claude 创建一个 subagent，或直接添加 `.claude/agents/<name>.md` 文件
+- 列出目录，确认 agent 文件已就位：`ls .claude/agents/`
+- 也可以询问 Claude 当前会话中有哪些可用的 subagent，它会报告可委派的内置与自定义 agent
 - 试着让 Claude 委派一个简单任务
 
 ## 文件结构
@@ -378,3 +386,16 @@ cp 04-subagents/*.md ~/.claude/agents/
 - [Memory 中文指南](../02-memory/README.md)
 - [Hooks 中文指南](../06-hooks/README.md)
 - [Plugins 中文指南](../07-plugins/README.md)
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/sub-agents
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/agent-view
+- https://code.claude.com/docs/en/sub-agents#permission-modes
+- https://code.claude.com/docs/en/sub-agents#available-tools

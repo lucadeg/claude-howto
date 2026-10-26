@@ -397,6 +397,8 @@ GitHub スタイルのアンカーで同一文書内のセクションへリン�
 - `sequenceDiagram` — インタラクションフロー
 - `timeline` — 時系列
 
+GitHub は Mermaid をネイティブにレンダリングする。Web サイトと EPUB は同じソースを [Pele](https://github.com/obsidianmd/pele)（`scripts/vendor_assets.py` でバージョン固定）でレンダリングし、pre-commit の `mermaid-syntax` フックも同じバンドルですべてのブロックを検証する。そのため、フックを通過したブロックはどこでも表示される。
+
 ### スタイル規約
 
 スタイルブロックで一貫した色を適用する：
@@ -425,6 +427,8 @@ graph TB
 
 - ノードラベルには `["Label text"]` を使う（特殊文字を許可）
 - ラベル内の改行には `<br/>` を使う
+- ラベルはプレーンテキストにし、番号付きラベルはそのまま書く（`["1. Load file"]`、ピリオドの前にバックスラッシュを付けない）
+- `%%{init}%%` ディレクティブや Mermaid のテーマに頼らない：Web サイトは独自のライト／ダーク配色を適用する
 - 図はシンプルに保つ（最大 10〜12 ノード）
 - アクセシビリティのため図の下に簡潔なテキスト説明を追加する
 - 階層には上から下（`TB`）、ワークフローには左から右（`LR`）を使う
@@ -603,12 +607,13 @@ docs(skills): Add comprehensive code review skill
 
 ```markdown
 ---
-**Last Updated**: March 2026
-**Claude Code Version**: 2.1.97
+**Last Updated**: August 2026
+**Claude Code Version**: 2.1.245
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
 ```
 
-- 月＋年の形式を使う（例：「March 2026」）
+- 月＋年の形式を使う（例：「August 2026」）
+- バージョンは、ここに示した値ではなく、現在の同期実行で取得したものを使う
 - 機能変更時にバージョンを更新する
 - 互換モデルをすべてリストする
 
@@ -637,10 +642,10 @@ docs(skills): Add comprehensive code review skill
 
 ---
 
-**Last Updated**: April 24, 2026
-**Claude Code Version**: 2.1.119
-**Sources**:
+**最終更新**：2026 年 8 月 25 日
+**Claude Code バージョン**：2.1.245
+**情報源**：
 - https://code.claude.com/docs/en/overview
 - https://code.claude.com/docs/en/changelog
 - https://www.anthropic.com/news/claude-opus-4-7
-**Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5
+**互換モデル**：Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5

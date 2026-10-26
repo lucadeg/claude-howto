@@ -1,5 +1,4 @@
 ---
-name: Generate API Documentation
 description: Генерація комплексної API-документації з вихідного коду
 ---
 
@@ -13,3 +12,11 @@ description: Генерація комплексної API-документац�
 4. Створення markdown з прикладами
 5. Включення схем запитів/відповідей
 6. Додавання документації помилок
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

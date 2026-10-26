@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Плагін Documentation
@@ -18,7 +18,7 @@
 ## Встановлення
 
 ```bash
-/plugin install documentation
+claude --plugin-dir ./07-plugins/documentation
 ```
 
 ## Що включено
@@ -66,7 +66,7 @@
 
 ## Вимоги
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - Доступ до GitHub (опціонально)
 
 ## Приклад робочого процесу
@@ -117,3 +117,11 @@ export GITHUB_TOKEN="your_github_token"
 - Включайте практичні приклади
 - Регулярно валідуйте
 - Використовуйте шаблони для консистентності
+
+---
+
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

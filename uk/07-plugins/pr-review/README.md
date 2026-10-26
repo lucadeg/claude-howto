@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Плагін PR Review
@@ -18,7 +18,7 @@
 ## Встановлення
 
 ```bash
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ## Що включено
@@ -58,7 +58,7 @@
 
 ## Вимоги
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - Доступ до GitHub
 - Git-репозиторій
 
@@ -89,3 +89,11 @@ Claude:
 ✅ Продуктивність: Суттєвого впливу немає
 📝 Рекомендації: Додати тести для граничних випадків
 ```
+
+---
+
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

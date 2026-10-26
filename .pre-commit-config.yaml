@@ -7,8 +7,11 @@ default_language_version:
 
 repos:
   # Ruff - Fast Python linter and formatter
+  # Keep this in step with the `ruff` floor in scripts/requirements-dev.txt and
+  # the unpinned `uv pip install ruff` in the CI lint job. A stale pin here
+  # reformats files the newer ruff in CI then rejects, and vice versa.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.2
+    rev: v0.15.10
     hooks:
       - id: ruff
         name: ruff-lint
@@ -60,6 +63,8 @@ repos:
         args: [--config-file, scripts/pyproject.toml]
         files: ^scripts/
         exclude: ^scripts/tests/
+        additional_dependencies:
+          - types-Markdown
 
   # Local doc quality hooks (mirrors CI checks — CI is a 2nd pass of these)
   - repo: local
@@ -79,10 +84,17 @@ repos:
         pass_filenames: false
         types: [markdown]
 
+      # The three *mermaid hooks render every diagram with the pinned Pele
+      # bundle. `language: node` makes pre-commit provision Node.js 22 for the
+      # hook (nodeenv), so no system Node is needed, and `--strict` makes a
+      # failed bundle download fail the hook instead of skipping it. The first
+      # run needs network access; offline, skip them with
+      # SKIP=mermaid,vietnamese-mermaid,japanese-mermaid.
       - id: mermaid
         name: mermaid-syntax
-        language: system
-        entry: python scripts/check_mermaid.py
+        language: node
+        language_version: 22.12.0
+        entry: python scripts/check_mermaid.py --strict
         pass_filenames: false
         types: [markdown]
         verbose: true
@@ -95,12 +107,17 @@ repos:
         types: [markdown]
         verbose: true
 
-      - id: build-epub
-        name: build-epub
+      - id: markdown-rendering
+        name: markdown-rendering
         language: system
-        entry: uv run scripts/build_epub.py
+        entry: python scripts/check_markdown_rendering.py
         pass_filenames: false
-        files: ^(.*\.md|scripts/build_epub\.py)$
+        types: [markdown]
+
+      # The EPUB build is intentionally CI-only (see the `build-epub` job in
+      # .github/workflows/test.yml): it is a slow full-book build. The mermaid
+      # hooks above already render every diagram with the same Pele bundle
+      # the EPUB uses, so a broken diagram still fails at commit time.
 
   # Vietnamese documentation checks
   - repo: local
@@ -122,8 +139,9 @@ repos:
 
       - id: vietnamese-mermaid
         name: vietnamese-mermaid-syntax
-        language: system
-        entry: python scripts/check_mermaid.py
+        language: node
+        language_version: 22.12.0
+        entry: python scripts/check_mermaid.py --strict
         pass_filenames: false
         files: ^vi/.*\.md$
         verbose: true
@@ -135,13 +153,6 @@ repos:
         pass_filenames: false
         files: ^vi/.*\.md$
         verbose: true
-
-      - id: vietnamese-build-epub
-        name: vietnamese-build-epub
-        language: system
-        entry: uv run scripts/build_epub.py --lang vi
-        pass_filenames: false
-        files: ^(vi/.*\.md|scripts/build_epub\.py)$
 
   # Japanese documentation checks
   - repo: local
@@ -163,8 +174,9 @@ repos:
 
       - id: japanese-mermaid
         name: japanese-mermaid-syntax
-        language: system
-        entry: python scripts/check_mermaid.py
+        language: node
+        language_version: 22.12.0
+        entry: python scripts/check_mermaid.py --strict
         pass_filenames: false
         files: ^ja/.*\.md$
         verbose: true
@@ -176,10 +188,3 @@ repos:
         pass_filenames: false
         files: ^ja/.*\.md$
         verbose: true
-
-      - id: japanese-build-epub
-        name: japanese-build-epub
-        language: system
-        entry: uv run scripts/build_epub.py --lang ja
-        pass_filenames: false
-        files: ^(ja/.*\.md|scripts/build_epub\.py)$

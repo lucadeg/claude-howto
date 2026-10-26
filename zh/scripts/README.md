@@ -9,6 +9,7 @@
 - Python 环境
 - `uv`
 - 相关依赖
+- Node.js >= 20（Mermaid 图表由固定版本的 Pele 渲染，首次运行时下载并缓存到 `scripts/.vendor-cache/pele/`）
 
 ## 快速开始
 
@@ -67,3 +68,4 @@ uv run scripts/build_epub.py
 - 检查 `uv` 是否可用
 - 检查 Python 版本
 - 检查依赖是否安装完整
+- 检查 `node --version` 是否 >= 20；首次构建需要联网下载 Pele 包

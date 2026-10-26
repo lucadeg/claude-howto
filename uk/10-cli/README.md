@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Довідник CLI
@@ -44,7 +44,8 @@ graph TD
 | `claude mcp serve` | Запуск Claude Code як MCP-сервера | `claude mcp serve` |
 | `claude agents` | Список усіх налаштованих субагентів | `claude agents` |
 | `claude auto-mode defaults` | Вивести стандартні правила auto mode як JSON | `claude auto-mode defaults` |
-| `claude remote-control` | Запуск сервера Remote Control | `claude remote-control` |
+| `claude remote-control` | Запуск сервера Remote Control (серверний режим, без локальної інтерактивної сесії; обслуговує кілька сесій, `--capacity` за замовчуванням 32) | `claude remote-control --name "My Project"` |
+| `claude --remote-control [name]` | Запуск інтерактивної сесії з увімкненим Remote Control (аліас `--rc`) | `claude --rc` |
 | `claude plugin` | Управління плагінами (встановлення, увімкнення, вимкнення) | `claude plugin install my-plugin` |
 | `claude auth login` | Вхід (підтримує `--email`, `--sso`) | `claude auth login --email user@example.com` |
 | `claude auth logout` | Вихід з поточного облікового запису | `claude auth logout` |
@@ -61,17 +62,18 @@ graph TD
 | `-w, --worktree` | Запуск в ізольованому git worktree (робочому дереві) | `claude -w` |
 | `-n, --name` | Відображувана назва сесії | `claude -n "auth-refactor"` |
 | `--from-pr <number>` | Відновити сесії, привʼязані до GitHub PR | `claude --from-pr 42` |
-| `--remote "task"` | Створити веб-сесію на claude.ai | `claude --remote "implement API"` |
+| `--cloud [description\|session_id\|url]` | Створити хмарну сесію на claude.ai із заданим описом або приєднатися до наявної за session ID чи URL claude.ai/code | `claude --cloud "implement API"` |
+| `--remote "task"` | **Застарілий аліас для `--cloud`**, включно з формою приєднання до наявної сесії. Використовуйте `--cloud` | `claude --remote "implement API"` |
 | `--remote-control, --rc` | Інтерактивна сесія з Remote Control | `claude --rc` |
 | `--teleport` | Відновити веб-сесію локально | `claude --teleport` |
 | `--teammate-mode` | Режим відображення Agent Teams | `claude --teammate-mode tmux` |
 | `--bare` | Мінімальний режим (без хуків, навичок, плагінів, MCP, auto memory, CLAUDE.md) | `claude --bare` |
 | `--enable-auto-mode` | Розблокувати auto permission mode | `claude --enable-auto-mode` |
-| `--channels` | Підписка на MCP channel plugins | `claude --channels discord,telegram` |
+| `--channels` | Підписка на MCP channel plugins. Кожен запис має бути позначений як `plugin:<name>@<marketplace>`; голі імена відхиляються | `claude --channels plugin:discord@my-marketplace` |
 | `--chrome` / `--no-chrome` | Увімкнути/вимкнути інтеграцію з браузером Chrome | `claude --chrome` |
 | `--effort` | Встановити рівень зусиль мислення | `claude --effort high` |
-| `--init` / `--init-only` | Запуск хуків ініціалізації | `claude --init` |
-| `--maintenance` | Запуск хуків обслуговування та вихід | `claude --maintenance` |
+| `--init` / `--init-only` | `--init` запускає хуки ініціалізації (Setup) перед сесією, лише в режимі print; `--init-only` запускає хуки Setup і `SessionStart`, а потім завершує роботу | `claude -p --init "query"` |
+| `--maintenance` | Запуск хуків обслуговування (Setup) перед сесією (лише в режимі print) | `claude -p --maintenance "query"` |
 | `--disable-slash-commands` | Вимкнути всі навички та слеш-команди | `claude --disable-slash-commands` |
 | `--no-session-persistence` | Вимкнути збереження сесії (print mode) | `claude -p --no-session-persistence "query"` |
 
@@ -119,14 +121,14 @@ claude -p "list todos" | grep "URGENT"
 ### Приклади вибору моделі
 
 ```bash
-# Opus 4.6 для складних завдань
+# Opus 5.5 для складних завдань
 claude --model opus "design a caching strategy"
 
-# Haiku 4.5 для швидких завдань
+# Haiku для швидких завдань (Haiku 5.5 в Anthropic API з v2.1.293; Haiku 4.5 у Bedrock, Vertex і Foundry)
 claude --model haiku -p "format this JSON"
 
 # Повна назва моделі
-claude --model claude-sonnet-4-6-20250929 "review this code"
+claude --model claude-sonnet-4-6 "review this code"
 
 # З фолбеком для надійності
 claude -p --model opus --fallback-model sonnet "analyze architecture"
@@ -140,7 +142,7 @@ claude --model opusplan "design and implement the caching layer"
 | Прапорець | Опис | Приклад |
 |-----------|------|---------|
 | `--system-prompt` | Замінити весь стандартний промпт | `claude --system-prompt "You are a Python expert"` |
-| `--system-prompt-file` | Завантажити промпт з файлу (print mode) | `claude -p --system-prompt-file ./prompt.txt "query"` |
+| `--system-prompt-file` | Завантажити промпт з файлу, замінивши промпт за замовчуванням | `claude -p --system-prompt-file ./prompt.txt "query"` |
 | `--append-system-prompt` | Додати до стандартного промпта | `claude --append-system-prompt "Always use TypeScript"` |
 
 ### Приклади системного промпта
@@ -161,10 +163,10 @@ claude -p --system-prompt-file ./prompts/code-reviewer.txt "review main.py"
 | Прапорець | Поведінка | Інтерактивний | Print |
 |-----------|----------|---------------|-------|
 | `--system-prompt` | Замінює весь стандартний системний промпт | ✅ | ✅ |
-| `--system-prompt-file` | Замінює промптом з файлу | ❌ | ✅ |
+| `--system-prompt-file` | Замінює промптом з файлу | ✅ | ✅ |
 | `--append-system-prompt` | Додає до стандартного системного промпта | ✅ | ✅ |
 
-**Використовуйте `--system-prompt-file` лише в print-режимі. Для інтерактивного режиму використовуйте `--system-prompt` або `--append-system-prompt`.**
+**Усі прапорці системного промпту працюють як в інтерактивному, так і в print-режимі (файлові форми — з v2.1.69). `--system-prompt` і `--system-prompt-file` замінюють промпт за замовчуванням; прапорці append додають до нього.**
 
 ## Управління інструментами та дозволами
 
@@ -203,7 +205,7 @@ claude --disallowedTools "Bash(rm -rf:*)" "Bash(git push --force:*)"
 | `--verbose` | Увімкнути детальне логування | | `claude --verbose` |
 | `--include-partial-messages` | Включити потокові (streaming) події | Потребує `stream-json` | `claude -p --output-format stream-json --include-partial-messages "query"` |
 | `--json-schema` | Отримати валідований JSON за схемою | | `claude -p --json-schema '{"type":"object"}' "query"` |
-| `--max-budget-usd` | Максимальні витрати для print mode | | `claude -p --max-budget-usd 5.00 "query"` |
+| `--max-budget-usd` | Максимальні витрати для print mode. Починаючи з v2.1.217, після досягнення ліміту також зупиняються фонові subagent-и, що виконуються, і забороняється запуск нових (раніше фонові агенти продовжували працювати після перевищення ліміту) | | `claude -p --max-budget-usd 5.00 "query"` |
 
 ### Приклади формату виводу
 
@@ -247,7 +249,7 @@ claude --settings '{"model":"opus","verbose":true}' "complex task"
 |-----------|------|---------|
 | `--mcp-config` | Завантажити MCP-сервери з JSON | `claude --mcp-config ./mcp.json` |
 | `--strict-mcp-config` | Використовувати тільки вказану MCP-конфігурацію | `claude --strict-mcp-config --mcp-config ./mcp.json` |
-| `--channels` | Підписка на MCP channel plugins | `claude --channels discord,telegram` |
+| `--channels` | Підписка на MCP channel plugins. Кожен запис має бути позначений як `plugin:<name>@<marketplace>`; голі імена відхиляються | `claude --channels plugin:discord@my-marketplace` |
 
 ### Приклади MCP
 
@@ -310,17 +312,17 @@ claude -r "feature-auth" --fork-session "test with different architecture"
 | `--no-chrome` | Вимкнути інтеграцію з Chrome | `claude --no-chrome` |
 | `--ide` | Автопідключення до IDE, якщо доступна | `claude --ide` |
 | `--max-turns` | Обмежити кількість агентних кроків (неінтерактивний режим) | `claude -p --max-turns 3 "query"` |
-| `--debug` | Увімкнути режим налагодження з фільтрацією | `claude --debug "api,mcp"` |
+| `--debug` | Увімкнути режим налагодження з фільтрацією (фільтр діє лише у формі з `=`) | `claude --debug=api,mcp` |
 | `--enable-lsp-logging` | Увімкнути детальне логування LSP | `claude --enable-lsp-logging` |
 | `--betas` | Beta-заголовки для API-запитів | `claude --betas interleaved-thinking` |
 | `--plugin-dir` | Завантажити плагіни з каталогу (повторюваний) | `claude --plugin-dir ./my-plugin` |
 | `--enable-auto-mode` | Розблокувати auto permission mode | `claude --enable-auto-mode` |
 | `--effort` | Встановити рівень зусиль мислення | `claude --effort high` |
 | `--bare` | Мінімальний режим (без хуків, навичок, плагінів, MCP, auto memory, CLAUDE.md) | `claude --bare` |
-| `--channels` | Підписка на MCP channel plugins | `claude --channels discord` |
-| `--tmux` | Створити tmux-сесію для worktree | `claude --tmux` |
+| `--channels` | Підписка на MCP channel plugins (позначені як `plugin:<name>@<marketplace>`) | `claude --channels plugin:discord@my-marketplace` |
+| `--tmux` | Створити tmux-сесію для worktree (потребує `--worktree`) | `claude --worktree feature-x --tmux` |
 | `--fork-session` | Створити новий ID сесії при відновленні | `claude --resume abc --fork-session` |
-| `--max-budget-usd` | Максимальні витрати (print mode) | `claude -p --max-budget-usd 5.00 "query"` |
+| `--max-budget-usd` | Максимальні витрати (print mode); також зупиняє фонові subagent-и при досягненні ліміту (v2.1.217) | `claude -p --max-budget-usd 5.00 "query"` |
 | `--json-schema` | Валідований JSON-вивід | `claude -p --json-schema '{"type":"object"}' "q"` |
 
 ### Приклади розширених функцій
@@ -330,7 +332,7 @@ claude -r "feature-auth" --fork-session "test with different architecture"
 claude -p --max-turns 5 "refactor this module"
 
 # Налагодження API-викликів
-claude --debug "api" "test query"
+claude --debug=api "test query"
 
 # Увімкнути інтеграцію з IDE
 claude --ide "help me with this file"
@@ -612,45 +614,49 @@ claude -p --output-format json \
   --json-schema '{"type":"object","properties":{"functions":{"type":"array"},"complexity":{"type":"string"}}}' \
   "analyze main.py and return function list with complexity rating"
 
-# Інтеграція з jq для обробки
-claude -p --output-format json "list all API endpoints" | jq '.endpoints[]'
+# Інтеграція з jq для обробки (вивід за схемою потрапляє в .structured_output)
+claude -p --output-format json \
+  --json-schema '{"type":"object","properties":{"endpoints":{"type":"array"}}}' \
+  "list all API endpoints" | jq '.structured_output.endpoints[]'
 
 # Використання в скриптах
-RESULT=$(claude -p --output-format json "is this code secure? answer with {secure: boolean, issues: []}" < code.py)
-if echo "$RESULT" | jq -e '.secure == false' > /dev/null; then
+RESULT=$(claude -p --output-format json \
+  --json-schema '{"type":"object","properties":{"secure":{"type":"boolean"},"issues":{"type":"array"}},"required":["secure","issues"]}' \
+  "is this code secure?" < code.py)
+if echo "$RESULT" | jq -e '.structured_output.secure == false' > /dev/null; then
   echo "Security issues found!"
-  echo "$RESULT" | jq '.issues[]'
+  echo "$RESULT" | jq '.structured_output.issues[]'
 fi
 ```
 
 ### Приклади парсингу jq
 
-Парсинг та обробка JSON-виводу Claude за допомогою `jq`:
+Парсинг та обробка JSON-виводу Claude за допомогою `jq`. Текст відповіді міститься в `.result`; з `--json-schema` перевірений обʼєкт міститься в `.structured_output` (`$SCHEMA` нижче позначає схему, що визначає поля, які читає кожен фільтр):
 
 ```bash
-# Витяг конкретних полів
-claude -p --output-format json "analyze this code" | jq '.result'
+# Витяг тексту відповіді
+claude -p --output-format json "analyze this code" | jq -r '.result'
 
 # Фільтрація елементів масиву
-claude -p --output-format json "list issues" | jq -r '.issues[] | select(.severity=="high")'
+claude -p --output-format json --json-schema "$SCHEMA" "list issues" | jq -r '.structured_output.issues[] | select(.severity=="high")'
 
 # Витяг кількох полів
-claude -p --output-format json "describe the project" | jq -r '.{name, version, description}'
+claude -p --output-format json --json-schema "$SCHEMA" "describe the project" | jq -r '.structured_output | {name, version, description}'
 
 # Конвертація в CSV
-claude -p --output-format json "list functions" | jq -r '.functions[] | [.name, .lineCount] | @csv'
+claude -p --output-format json --json-schema "$SCHEMA" "list functions" | jq -r '.structured_output.functions[] | [.name, .lineCount] | @csv'
 
 # Умовна обробка
-claude -p --output-format json "check security" | jq 'if .vulnerabilities | length > 0 then "UNSAFE" else "SAFE" end'
+claude -p --output-format json --json-schema "$SCHEMA" "check security" | jq 'if (.structured_output.vulnerabilities | length) > 0 then "UNSAFE" else "SAFE" end'
 
 # Витяг вкладених значень
-claude -p --output-format json "analyze performance" | jq '.metrics.cpu.usage'
+claude -p --output-format json --json-schema "$SCHEMA" "analyze performance" | jq '.structured_output.metrics.cpu.usage'
 
 # Обробка всього масиву
-claude -p --output-format json "find todos" | jq '.todos | length'
+claude -p --output-format json --json-schema "$SCHEMA" "find todos" | jq '.structured_output.todos | length'
 
 # Трансформація виводу
-claude -p --output-format json "list improvements" | jq 'map({title: .title, priority: .priority})'
+claude -p --output-format json --json-schema "$SCHEMA" "list improvements" | jq '.structured_output.improvements | map({title: .title, priority: .priority})'
 ```
 
 ---
@@ -712,14 +718,14 @@ export CLAUDE_CODE_EFFORT_LEVEL=high   # low, medium, high або max (лише 
 | `MAX_THINKING_TOKENS` | Бюджет токенів розширеного мислення |
 | `CLAUDE_CODE_EFFORT_LEVEL` | Рівень зусиль (`low`/`medium`/`high`/`max`) |
 | `CLAUDE_CODE_SIMPLE` | Мінімальний режим, встановлюється прапорцем `--bare` |
-| `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | Вимкнути автоматичне оновлення CLAUDE.md |
+| `CLAUDE_CODE_DISABLE_AUTO_MEMORY` | Встановіть `1`, щоб вимкнути auto memory (файли auto memory не створюються і не завантажуються) |
 | `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS` | Вимкнути виконання фонових завдань |
 | `CLAUDE_CODE_DISABLE_CRON` | Вимкнути заплановані/cron-завдання |
 | `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS` | Вимкнути git-інструкції |
 | `CLAUDE_CODE_DISABLE_TERMINAL_TITLE` | Вимкнути оновлення заголовка терміналу |
 | `CLAUDE_CODE_DISABLE_1M_CONTEXT` | Вимкнути контекстне вікно 1M токенів |
 | `CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK` | Вимкнути фолбек без стрімінгу |
-| `CLAUDE_CODE_ENABLE_TASKS` | Увімкнути функцію списку завдань |
+| `CLAUDE_CODE_ENABLE_TASKS` | Інструменти Task використовуються за замовчуванням; встановіть `0`, щоб повернути застарілий інструмент `TodoWrite` |
 | `CLAUDE_CODE_TASK_LIST_ID` | Іменований каталог завдань, спільний між сесіями |
 | `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION` | Увімкнути/вимкнути пропозиції промптів (`true`/`false`) |
 | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` | Увімкнути експериментальні Agent Teams |
@@ -779,9 +785,9 @@ claude -p --output-format json "query"
 **Проблема:** `claude: command not found`
 
 **Рішення:**
-- Встановіть Claude Code: `npm install -g @anthropic-ai/claude-code`
-- Перевірте, що PATH включає глобальний bin-каталог npm
-- Спробуйте запуск з повним шляхом: `npx claude`
+- Встановіть Claude Code: `curl -fsSL https://claude.ai/install.sh | bash` (нативний, рекомендовано) або `npm install -g @anthropic-ai/claude-code`
+- Перевірте, що PATH включає `~/.local/bin` (нативне встановлення) або глобальний bin-каталог npm
+- Запустіть `claude doctor`
 
 ### Проблеми з API-ключем
 
@@ -836,6 +842,15 @@ claude -p --output-format json "query"
 *Частина серії посібників [Claude How To](../)*
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
-**Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/headless
+- https://code.claude.com/docs/en/env-vars
+- https://platform.claude.com/docs/en/about-claude/models/overview
+- https://code.claude.com/docs/en/model-config
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/setup
+- https://code.claude.com/docs/en/troubleshoot-install#command-not-found-claude-after-installation
+**Сумісні моделі**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5

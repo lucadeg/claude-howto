@@ -1,5 +1,4 @@
 ---
-name: Deploy
 description: Deploy application to production or staging
 ---
 
@@ -13,3 +12,11 @@ Execute deployment workflow:
 4. Deploy to target environment
 5. Run health checks
 6. Notify team on Slack
+
+---
+
+**Cập Nhật Lần Cuối**: Ngày 15 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.300
+**Nguồn**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

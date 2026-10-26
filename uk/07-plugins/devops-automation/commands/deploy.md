@@ -1,5 +1,4 @@
 ---
-name: Deploy
 description: Розгортання застосунку на продакшен або стейджинг
 ---
 
@@ -13,3 +12,11 @@ description: Розгортання застосунку на продакшен
 4. Розгортання на цільове середовище
 5. Запуск перевірок стану
 6. Повідомлення команди в Slack
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

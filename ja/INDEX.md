@@ -162,20 +162,21 @@ blog-draft/
 
 ---
 
-## 04. サブエージェント（9 ファイル）
+## 04. サブエージェント（10 ファイル）
 
 カスタム能力を持つ専門特化 AI アシスタント。
 
 | ファイル | 説明 | ツール | ユースケース |
 |------|-------------|-------|----------|
-| `code-reviewer.md` | コード品質分析 | read, grep, diff, lint_runner | 包括的レビュー |
-| `test-engineer.md` | テストカバレッジ分析 | read, write, bash, grep | テスト自動化 |
-| `documentation-writer.md` | ドキュメント作成 | read, write, grep | ドキュメント生成 |
-| `secure-reviewer.md` | セキュリティレビュー（読み取り専用） | read, grep | セキュリティ監査 |
-| `implementation-agent.md` | フル実装 | read, write, bash, grep, edit, glob | 機能開発 |
-| `debugger.md` | デバッグ専門家 | read, bash, grep | バグ調査 |
-| `data-scientist.md` | データ分析専門家 | read, write, bash | データワークフロー |
-| `clean-code-reviewer.md` | クリーンコード基準 | read, grep | コード品質 |
+| `code-reviewer.md` | コード品質分析 | Read, Grep, Glob, Bash | 包括的レビュー |
+| `test-engineer.md` | テストカバレッジ分析 | Read, Write, Bash, Grep | テスト自動化 |
+| `documentation-writer.md` | ドキュメント作成 | Read, Write, Grep | ドキュメント生成 |
+| `secure-reviewer.md` | セキュリティレビュー（読み取り専用） | Read, Grep | セキュリティ監査 |
+| `implementation-agent.md` | フル実装 | Read, Write, Edit, Bash, Grep, Glob | 機能開発 |
+| `debugger.md` | デバッグ専門家 | Read, Edit, Bash, Grep, Glob | バグ調査 |
+| `data-scientist.md` | データ分析専門家 | Bash, Read, Write | データワークフロー |
+| `clean-code-reviewer.md` | クリーンコード基準 | Read, Grep, Glob, Bash | コード品質 |
+| `performance-optimizer.md` | パフォーマンスボトルネック分析 | Read, Edit, Bash, Grep, Glob | 最適化作業 |
 | `README.md` | ドキュメント | - | セットアップと使用ガイド |
 
 **インストール先**：`.claude/agents/`
@@ -202,31 +203,34 @@ blog-draft/
 
 ---
 
-## 06. フック（9 ファイル）
+## 06. フック（10 ファイル）
 
 自動実行されるイベント駆動の自動化スクリプト。
 
 | ファイル | 説明 | イベント | ユースケース |
 |------|-------------|-------|----------|
-| `format-code.sh` | コード自動整形 | PreToolUse:Write | コード整形 |
-| `pre-commit.sh` | コミット前のテスト実行 | PreToolUse:Bash | テスト自動化 |
-| `security-scan.sh` | セキュリティスキャン | PostToolUse:Write | セキュリティチェック |
-| `log-bash.sh` | bash コマンド記録 | PostToolUse:Bash | コマンドログ |
-| `validate-prompt.sh` | プロンプト検証 | PreToolUse | 入力検証 |
-| `notify-team.sh` | 通知送信 | Notification | チーム通知 |
-| `context-tracker.py` | コンテキストウィンドウ使用量追跡 | PostToolUse | コンテキスト監視 |
-| `context-tracker-tiktoken.py` | トークンベースのコンテキスト追跡 | PostToolUse | 精密なトークン計測 |
+| `format-code.sh` | コード自動整形 | PostToolUse（matcher: Write） | コード整形 |
+| `pre-commit.sh` | コミット前のテスト実行 | PreToolUse（matcher: Bash） | テスト自動化 |
+| `pre-tool-check.sh` | 実行前のコマンド検証と監査 | PreToolUse（matcher: Bash） | ガードレール、監査ログ |
+| `security-scan.sh` | セキュリティスキャン | PostToolUse（matcher: Write） | セキュリティチェック |
+| `dependency-check.sh` | 依存関係マニフェストの脆弱性スキャン | PostToolUse（matcher: Write） | サプライチェーン検査 |
+| `log-bash.sh` | bash コマンド記録 | PostToolUse（matcher: Bash） | コマンドログ |
+| `notify-team.sh` | 通知送信 | PostToolUse（matcher: Bash） | チーム通知 |
+| `validate-prompt.sh` | プロンプト検証 | UserPromptSubmit | 入力検証 |
+| `session-end.sh` | セッション終了時に進捗を記録 | SessionEnd | 進捗トラッキング |
 | `README.md` | ドキュメント | - | セットアップと使用ガイド |
 
 **インストール先**：`~/.claude/settings.json` で設定
 
 **使い方**：設定で構成し、自動実行される
 
-**フックの種類**（5 系統、28 イベント）：
-- ツール系フック：PreToolUse、PostToolUse、PostToolUseFailure、PermissionRequest
-- セッション系フック：SessionStart、SessionEnd、Stop、StopFailure、SubagentStart、SubagentStop
-- タスク系フック：UserPromptSubmit、TaskCompleted、TaskCreated、TeammateIdle
-- ライフサイクル系フック：ConfigChange、CwdChanged、FileChanged、PreCompact、PostCompact、WorktreeCreate、WorktreeRemove、Notification、InstructionsLoaded、Elicitation、ElicitationResult
+**フックの種類**（5 種）：`command`、`http`、`prompt`、`mcp_tool`、`agent` — フックの実行方式。
+
+**フックイベント**（33 件、4 カテゴリ）— 実行タイミング：
+- ツール系フック：PreToolUse、PostToolUse、PostToolUseFailure、PostToolBatch、PermissionRequest、PermissionDenied
+- セッション系フック：SessionStart、Setup、SessionEnd、Stop、StopFailure、SubagentStart、SubagentStop
+- タスク系フック：UserPromptSubmit、UserPromptExpansion、MessageDisplay、TaskCompleted、TaskCreated、TeammateIdle（TaskCompleted と TaskCreated は todo ツールが有効なときのみ発火 — Claude 3.x、Opus 4〜4.7、Sonnet 4〜4.6、Haiku 4.5 でのみデフォルト有効。`CLAUDE_CODE_ENABLE_TODO_TOOLS=1` で復活）
+- ライフサイクル系フック：ConfigChange、CwdChanged、DirectoryAdded、FileChanged、PreCompact、PostCompact、PreModelSwitch、PostModelSwitch、WorktreeCreate、WorktreeRemove、Notification、InstructionsLoaded、Elicitation、ElicitationResult
 
 ---
 
@@ -258,7 +262,7 @@ pr-review/
 
 **コマンド**：`/review-pr`、`/check-security`、`/check-tests`
 
-**インストール**：`/plugin install pr-review`
+**インストール**：`claude --plugin-dir ./07-plugins/pr-review` （リポジトリのルートから）
 
 ---
 
@@ -292,7 +296,7 @@ devops-automation/
 
 **コマンド**：`/deploy`、`/rollback`、`/status`、`/incident`
 
-**インストール**：`/plugin install devops-automation`
+**インストール**：`claude --plugin-dir ./07-plugins/devops-automation` （リポジトリのルートから）
 
 ---
 
@@ -323,7 +327,7 @@ documentation/
 
 **コマンド**：`/generate-api-docs`、`/generate-readme`、`/sync-docs`、`/validate-docs`
 
-**インストール**：`/plugin install documentation`
+**インストール**：`claude --plugin-dir ./07-plugins/documentation` （リポジトリのルートから）
 
 **追加**：`README.md` — プラグイン概要と使用ガイド
 
@@ -350,7 +354,7 @@ documentation/
 # 巻き戻しは Esc を 2 回押すか、次を実行:
 /rewind
 # 選択肢: コードと会話の復元、会話の復元、
-# コードの復元、ここから要約、やめる
+# コードの復元、ここから要約、ここまでを要約、やめる
 ```
 
 **ユースケース**：
@@ -372,7 +376,7 @@ documentation/
 | `config-examples.json` | 設定例 | ユースケース別の 10 種以上の設定 |
 | `planning-mode-examples.md` | プランニング例 | REST API、DB マイグレーション、リファクタリング |
 | スケジュールタスク | `/loop` および cron ツールによる反復タスク | 自動化された反復ワークフロー |
-| Chrome 連携 | ヘッドレス Chromium によるブラウザ自動化 | Web テストとスクレイピング |
+| Chrome 連携 | Claude in Chrome 拡張機能による自分の Chrome でのブラウザ自動化 | Web テストとスクレイピング |
 | リモートコントロール（拡張） | 接続方式、セキュリティ、比較表 | リモートセッション管理 |
 | キーバインドカスタマイズ | カスタムキーバインド、コード対応、コンテキスト | パーソナライズされたショートカット |
 | デスクトップアプリ（拡張） | コネクタ、launch.json、エンタープライズ機能 | デスクトップ統合 |
@@ -399,9 +403,9 @@ documentation/
 - **default**：危険な操作で承認を求める
 - **acceptEdits**：ファイル編集を自動承認、それ以外は確認
 - **plan**：読み取り専用分析、変更なし
-- **auto**：安全な操作を自動承認、危険なものは確認
-- **dontAsk**：危険なもの以外すべて承認
-- **bypassPermissions**：すべて承認（`--dangerously-skip-permissions` が必要）
+- **auto**：バックグラウンドの安全チェック付きで全操作を実行 — 分類器がコマンドと保護ディレクトリへの書き込みを審査する（`autoMode` 設定オブジェクトで構成）
+- **dontAsk**：事前承認済みのツールのみ — 本来プロンプトが出る呼び出しはすべて自動的に拒否される。Claude が実行できるのは `permissions.allow` に一致するもの、読み取り専用の Bash コマンド、`PreToolUse` フックが承認した呼び出しに限られる
+- **bypassPermissions**：すべて承認（`--permission-mode bypassPermissions` または同等の `--dangerously-skip-permissions` で有効化）
 
 ### ヘッドレスモード（`claude -p`）
 - CI/CD 統合
@@ -430,7 +434,7 @@ documentation/
 - 自動化された反復ワークフロー
 
 ### Chrome 連携
-- ヘッドレス Chromium によるブラウザ自動化
+- Claude in Chrome 拡張機能による自分の Chrome でのブラウザ自動化
 - Web テストおよびスクレイピング能力
 - ページ操作とデータ抽出
 
@@ -462,10 +466,10 @@ documentation/
 **主な CLI 機能**：
 - `claude` — 対話セッションを開始
 - `claude -p "prompt"` — ヘッドレス / 非対話モード
-- `claude web` — Web セッションを起動
+- `claude --cloud "task"` — クラウド（Web）セッションを開始
 - `claude --model` — モデル選択（Sonnet 4.6、Opus 4.7、Haiku 4.5）
 - `claude --permission-mode` — 権限モードの設定
-- `claude --remote` — WebSocket 経由のリモートコントロール有効化
+- `claude --remote-control` — claude.ai や Claude アプリからも操作できるセッションを開始
 
 ---
 
@@ -670,16 +674,16 @@ cp 01-slash-commands/optimize.md .claude/commands/
 cp 04-subagents/code-reviewer.md .claude/agents/
 
 # スキルをインストール
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # あるいは完全プラグインをインストール
-/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review
 ```
 
 ### DevOps とデプロイ
 ```bash
 # プラグインをインストール (すべて含む)
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ### ドキュメント
@@ -694,7 +698,7 @@ cp 04-subagents/documentation-writer.md .claude/agents/
 cp -r 03-skills/doc-generator ~/.claude/skills/
 
 # あるいは完全プラグインをインストール
-/plugin install documentation
+claude --plugin-dir ./07-plugins/documentation
 ```
 
 ### チーム標準
@@ -708,8 +712,10 @@ cp 02-memory/project-CLAUDE.md ./CLAUDE.md
 ### 外部統合
 ```bash
 # 環境変数を設定
-export GITHUB_TOKEN="your_token"
+export GITHUB_PERSONAL_ACCESS_TOKEN="your_token"
 export DATABASE_URL="postgresql://..."
+export SLACK_BOT_TOKEN="your-slack-bot-token"
+export SLACK_TEAM_ID="T0000000000"
 
 # MCP 設定をインストール (プロジェクトスコープ)
 cp 05-mcp/multi-mcp.json .mcp.json
@@ -766,9 +772,9 @@ Run tests in background
 | **01 スラッシュコマンド** | 8 | - | - | - | - | - | 1 | 1 | **10** |
 | **02 メモリ** | - | - | - | - | - | 3 | 1 | 2 | **6** |
 | **03 スキル** | - | - | - | - | 5 | 9 | 1 | - | **28** |
-| **04 サブエージェント** | - | 8 | - | - | - | - | 1 | - | **9** |
+| **04 サブエージェント** | - | 9 | - | - | - | - | 1 | - | **10** |
 | **05 MCP** | - | - | 4 | - | - | - | 1 | - | **5** |
-| **06 フック** | - | - | - | 8 | - | - | 1 | - | **9** |
+| **06 フック** | - | - | - | 9 | - | - | 1 | - | **10** |
 | **07 プラグイン** | 11 | 9 | 3 | 3 | 3 | 3 | 4 | - | **40** |
 | **08 チェックポイント** | - | - | - | - | - | - | 1 | 1 | **2** |
 | **09 高度な機能** | - | - | - | - | - | - | 1 | 2 | **3** |
@@ -812,12 +818,12 @@ Run tests in background
 ### パフォーマンス
 - `01-slash-commands/optimize.md` — パフォーマンス分析
 - `04-subagents/code-reviewer.md` — パフォーマンスレビュー
-- `03-skills/code-review/` — パフォーマンスメトリクス
+- `03-skills/code-review-specialist/` — パフォーマンスメトリクス
 - `07-plugins/pr-review/agents/performance-analyzer.md` — パフォーマンス専門家
 
 ### セキュリティ
 - `04-subagents/secure-reviewer.md` — セキュリティレビュー
-- `03-skills/code-review/` — セキュリティ分析
+- `03-skills/code-review-specialist/` — セキュリティ分析
 - `07-plugins/pr-review/` — セキュリティチェック
 
 ### テスト
@@ -878,16 +884,23 @@ Run tests in background
 
 ---
 
-**最終更新**：2026 年 4 月 24 日
-**Claude Code バージョン**：2.1.119
-**情報源**：
-- https://code.claude.com/docs/en/overview
-- https://code.claude.com/docs/en/hooks
-- https://code.claude.com/docs/en/commands
-- https://github.com/anthropics/claude-code/releases/tag/v2.1.119
+**最終更新**：2026 年 10 月 18 日
+**Claude Code バージョン**：2.1.302
 **互換モデル**：Claude Sonnet 4.6、Claude Opus 4.7、Claude Haiku 4.5
 **例題総数**：100 ファイル超
 **カテゴリ**：10 機能
 **フック**：自動化スクリプト 8 個
 **設定例**：10 シナリオ以上
 **すぐ使える**：すべての例
+**情報源**：
+- https://code.claude.com/docs/en/tools-reference#task-tool-availability
+- https://code.claude.com/docs/en/overview
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/commands
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.119
+- https://code.claude.com/docs/en/cli-reference
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/checkpointing
+- https://code.claude.com/docs/en/permission-modes

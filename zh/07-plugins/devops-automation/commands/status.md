@@ -1,5 +1,4 @@
 ---
-name: System Status
 description: 检查整体系统健康状况
 ---
 
@@ -13,3 +12,11 @@ description: 检查整体系统健康状况
 4. 查看错误率
 5. 检查资源利用率
 6. 报告整体健康状况
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

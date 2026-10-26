@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # 📚 Claude Code 学习路线图
@@ -98,14 +98,14 @@ graph TD
 
 | 步骤 | 功能 | 复杂度 | 时间 | 水平 | 依赖 | 为什么学它 | 关键收益 |
 |------|---------|-----------|------|-------|--------------|----------------|--------------|
-| **1** | [Slash Commands](01-slash-commands/README.md) | ⭐ Beginner | 30 分钟 | Level 1 | 无 | 快速获得生产力提升（55+ 内置命令 + 5 个 bundled skills） | 立即自动化、统一团队规范 |
+| **1** | [Slash Commands](01-slash-commands/README.md) | ⭐ Beginner | 30 分钟 | Level 1 | 无 | 快速获得生产力提升（55+ 内置命令 + bundled skills） | 立即自动化、统一团队规范 |
 | **2** | [Memory](02-memory/README.md) | ⭐⭐ Beginner+ | 45 分钟 | Level 1 | 无 | 所有功能的基础 | 持久上下文、偏好设置 |
 | **3** | [Checkpoints](08-checkpoints/README.md) | ⭐⭐ Intermediate | 45 分钟 | Level 1 | 会话管理 | 安全探索 | 试验、恢复 |
 | **4** | [CLI Basics](10-cli/README.md) | ⭐⭐ Beginner+ | 30 分钟 | Level 1 | 无 | 核心 CLI 用法 | 交互式与 print mode |
 | **5** | [Skills](03-skills/README.md) | ⭐⭐ Intermediate | 1 小时 | Level 2 | Slash Commands | 自动化专业能力 | 可复用能力、一致性 |
-| **6** | [Hooks](06-hooks/README.md) | ⭐⭐ Intermediate | 1 小时 | Level 2 | 工具、命令 | 工作流自动化（25 个事件、4 种类型） | 校验、质量门禁 |
+| **6** | [Hooks](06-hooks/README.md) | ⭐⭐ Intermediate | 1 小时 | Level 2 | 工具、命令 | 工作流自动化（33 个事件、5 种类型） | 校验、质量门禁 |
 | **7** | [MCP](05-mcp/README.md) | ⭐⭐⭐ Intermediate+ | 1 小时 | Level 2 | 配置 | 实时数据访问 | 实时集成、API |
-| **8** | [Subagents](04-subagents/README.md) | ⭐⭐⭐ Intermediate+ | 1.5 小时 | Level 2 | Memory、命令 | 处理复杂任务（包含 Bash 在内的 6 个内置 agent） | 委派、专业分工 |
+| **8** | [Subagents](04-subagents/README.md) | ⭐⭐⭐ Intermediate+ | 1.5 小时 | Level 2 | Memory、命令 | 处理复杂任务（6 个内置 agent，包括 Explore 和 Plan） | 委派、专业分工 |
 | **9** | [Advanced Features](09-advanced-features/README.md) | ⭐⭐⭐⭐⭐ Advanced | 2-3 小时 | Level 3 | 前面所有内容 | 高阶工具 | Planning、自动模式（Auto Mode）、通道（Channels）、语音输入、权限控制 |
 | **10** | [Plugins](07-plugins/README.md) | ⭐⭐⭐⭐ Advanced | 2 小时 | Level 3 | 前面所有内容 | 完整解决方案 | 团队入职、分发 |
 | **11** | [CLI Mastery](10-cli/README.md) | ⭐⭐⭐ Advanced | 1 小时 | Level 3 | 建议：全部 | 掌握命令行用法 | 脚本、CI/CD、自动化 |
@@ -238,7 +238,7 @@ cat error.log | claude -p "explain this error"
 
 #### 你将完成什么
 ✅ 通过 YAML frontmatter 自动触发专门能力（包含 `effort` 和 `shell` 字段）
-✅ 在 25 个 hook 事件上设置事件驱动自动化
+✅ 在 33 个 hook 事件上设置事件驱动自动化
 ✅ 使用 4 种 hook 类型（command、http、prompt、agent）
 ✅ 强制执行代码质量标准
 ✅ 为自己的工作流创建自定义 hooks
@@ -247,7 +247,7 @@ cat error.log | claude -p "explain this error"
 
 ```bash
 # 练习 1：安装一个 skill
-cp -r 03-skills/code-review ~/.claude/skills/
+cp -r 03-skills/code-review-specialist ~/.claude/skills/
 
 # 练习 2：设置 hooks
 mkdir -p ~/.claude/hooks
@@ -305,8 +305,7 @@ chmod +x ~/.claude/hooks/pre-tool-check.sh
 
 ```bash
 # 练习 1：设置 GitHub MCP
-export GITHUB_TOKEN="your_github_token"
-claude mcp add github -- npx -y @modelcontextprotocol/server-github
+claude mcp add --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer YOUR_GITHUB_PAT"
 
 # 练习 2：测试 MCP 集成
 # 在 Claude Code 中：/mcp__github__list_prs
@@ -374,7 +373,7 @@ cp 04-subagents/*.md .claude/agents/
 ✅ 管理后台任务
 ✅ 使用 Auto Memory 记住偏好
 ✅ 使用自动模式（Auto Mode）和后台安全分类器
-✅ 使用通道（Channels）组织多会话工作流
+✅ 通道（Channels）把事件（CI 结果、聊天消息、webhook）推送到正在运行的会话
 ✅ 使用语音输入（Voice Dictation）解放双手
 ✅ 远程控制、桌面应用和 Web 会话
 ✅ 使用 Agent Teams 协作
@@ -405,15 +404,15 @@ claude --permission-mode auto "implement the feature"
 claude --permission-mode auto "implement user settings page"
 
 # 练习 6：启用 agent teams
-export CLAUDE_AGENT_TEAMS=1
+export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 # 让 Claude 执行："Implement feature X using a team approach"
 
 # 练习 7：定时任务
 /loop 5m /check-status
-# 或使用 CronCreate 创建持久化定时任务
+# 任务仅限当前会话；如需持久化调度，请使用 Routines 或 Desktop 定时任务
 
-# 练习 8：用通道（Channels）管理多会话工作流
-# 用 channels 来组织跨会话工作
+# 练习 8：通道（Channels，研究预览）
+# 通道是一个把事件推送到你正在运行的会话中的 MCP server
 
 # 练习 9：语音输入（Voice Dictation）
 # 用语音输入和 Claude Code 进行无手操作
@@ -425,7 +424,7 @@ export CLAUDE_AGENT_TEAMS=1
 - [ ] 用 Alt+T / Option+T 切换过 extended thinking
 - [ ] 使用过带后台安全分类器的自动模式（Auto mode）
 - [ ] 使用过后台任务处理长时间操作
-- [ ] 探索过通道（Channels）做多会话工作流
+- [ ] 探索过把外部事件推送到会话的通道（Channels）
 - [ ] 尝试过语音输入（Voice Dictation）做无手输入
 - [ ] 理解 Remote Control、Desktop App 和 Web 会话
 - [ ] 启用并使用过 Agent Teams 做协作任务
@@ -456,7 +455,7 @@ export CLAUDE_AGENT_TEAMS=1
 
 ```bash
 # 练习 1：安装一个完整 plugin
-# 在 Claude Code 中：/plugin install pr-review
+claude --plugin-dir ./07-plugins/pr-review  # 在仓库根目录运行
 
 # 练习 2：让 print mode 服务于 CI/CD
 claude -p "Run all tests and generate report"
@@ -676,13 +675,13 @@ done
 
 1. **写团队文档** - 记录团队的 Claude Code 配置
 2. **构建自定义 plugins** - 把团队工作流打包起来
-3. **探索 Remote Control** - 通过外部工具以编程方式控制 Claude Code 会话
+3. **探索 Remote Control** - 从手机、浏览器或 Claude 应用继续本地的 Claude Code 会话
 4. **试试 Web Sessions** - 用浏览器界面远程开发
 5. **使用 Desktop App** - 通过原生桌面应用访问 Claude Code
 6. **使用自动模式（Auto Mode）** - 让 Claude 在后台安全分类器保护下自主工作
 7. **启用 Auto Memory** - 让 Claude 随时间自动学习你的偏好
 8. **设置 Agent Teams** - 让多个 agent 协同处理复杂、多维任务
-9. **使用通道（Channels）** - 用结构化的多会话工作流组织工作
+9. **使用通道（Channels）** - 连接一个把事件（CI 结果、聊天消息、webhook）推送到正在运行会话的 MCP server
 10. **试试语音输入（Voice Dictation）** - 用语音无障碍地与 Claude Code 交互
 11. **使用 Scheduled Tasks** - 借助 `/loop` 和 cron 工具自动化周期性检查
 12. **贡献示例** - 把经验分享给社区
@@ -716,7 +715,18 @@ done
 
 ---
 
-**最后更新**：2026 年 3 月
+**最后更新**：2026 年 10 月 18 日
+**Claude Code 版本**：2.1.302
+**来源**：
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/mcp
+- https://code.claude.com/docs/en/plugins/install
+- https://code.claude.com/docs/en/channels
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/scheduled-tasks
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/sub-agents
 **维护者**：Claude How-To Contributors
 **许可证**：仅供学习与参考，免费使用和改编
 

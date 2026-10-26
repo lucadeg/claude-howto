@@ -1,5 +1,4 @@
 ---
-name: Test Coverage Check
 description: Верифікація покриття тестами та їх якості
 ---
 
@@ -12,3 +11,11 @@ description: Верифікація покриття тестами та їх я
 3. Оцінка якості тестів
 4. Пропозиція відсутніх тест-кейсів
 5. Перевірка покриття граничних випадків
+
+---
+
+**Останнє оновлення**: 15 жовтня 2026
+**Версія Claude Code**: 2.1.300
+**Джерела**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

@@ -3,8 +3,8 @@
 <!-- i18n-date: 2026-04-09 -->
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Гайд зі стилю
@@ -395,6 +395,8 @@ ls .claude/commands/
 - `sequenceDiagram` — потоки взаємодії
 - `timeline` — хронологічні послідовності
 
+GitHub рендерить Mermaid нативно. Вебсайт і EPUB рендерять те саме джерело через [Pele](https://github.com/obsidianmd/pele) (версія закріплена в `scripts/vendor_assets.py`), а pre-commit хук `mermaid-syntax` перевіряє кожен блок тим самим бандлом, тож блок, який пройшов хук, відображається всюди.
+
 ### Стильові конвенції
 
 Застосовуйте консистентні кольори за допомогою блоків стилів:
@@ -423,6 +425,8 @@ graph TB
 
 - Використовуйте `["Label text"]` для міток вузлів (дозволяє спеціальні символи)
 - Використовуйте `<br/>` для переносу рядків у мітках
+- Пишіть мітки простим текстом, а нумеровані мітки — як є (`["1. Load file"]`, без зворотної скісної риски перед крапкою)
+- Не покладайтеся на директиви `%%{init}%%` чи теми Mermaid: вебсайт застосовує власну світлу й темну палітру
 - Тримайте діаграми простими (максимум 10-12 вузлів)
 - Додавайте короткий текстовий опис під діаграмою для доступності
 - Використовуйте зверху вниз (`TB`) для ієрархій, зліва направо (`LR`) для робочих процесів
@@ -601,12 +605,13 @@ README уроків завершуються блоком метаданих:
 
 ```markdown
 ---
-**Last Updated**: March 2026
-**Claude Code Version**: 2.1.97
+**Last Updated**: August 2026
+**Claude Code Version**: 2.1.245
 **Compatible Models**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5
 ```
 
-- Використовуйте формат місяць + рік (напр., "March 2026")
+- Використовуйте формат місяць + рік (напр., "August 2026")
+- Використовуйте версію, зафіксовану поточним запуском синхронізації, а не значення, показане тут
 - Оновлюйте версію при зміні функцій
 - Перелічуйте всі сумісні моделі
 
@@ -634,4 +639,8 @@ README уроків завершуються блоком метаданих:
 - [ ] Повідомлення коміту відповідає формату conventional commits
 
 ---
-**Останнє оновлення**: Квітень 2026
+
+**Останнє оновлення**: 25 серпня 2026
+**Версія Claude Code**: 2.1.245
+**Джерела**:
+- https://code.claude.com/docs/en/overview

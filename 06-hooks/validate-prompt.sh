@@ -10,11 +10,8 @@
 INPUT=$(cat)
 
 # Extract the prompt text from JSON input
-# Claude Code sends UserPromptSubmit with field "user_prompt" (falls back to "prompt")
-PROMPT=$(echo "$INPUT" | sed -n 's/.*"user_prompt"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-if [ -z "$PROMPT" ]; then
-  PROMPT=$(echo "$INPUT" | sed -n 's/.*"prompt"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-fi
+# Claude Code sends the UserPromptSubmit text in the "prompt" field
+PROMPT=$(echo "$INPUT" | sed -n 's/.*"prompt"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 
 if [ -z "$PROMPT" ]; then
   exit 0
@@ -47,7 +44,7 @@ fi
 # Check for required context in certain operations
 if echo "$PROMPT" | grep -qi "refactor"; then
   if [ ! -d "tests" ] && [ ! -d "test" ]; then
-    printf '{"additionalContext": "Warning: Refactoring without tests may be risky. Consider writing tests first."}'
+    printf '{"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "Warning: Refactoring without tests may be risky. Consider writing tests first."}}'
   fi
 fi
 

@@ -1,5 +1,4 @@
 ---
-name: Test Coverage Check
 description: 验证测试覆盖率和质量
 ---
 
@@ -12,3 +11,11 @@ description: 验证测试覆盖率和质量
 3. 审查测试质量
 4. 建议缺失的测试用例
 5. 确认边界情况已覆盖
+
+---
+
+**最后更新**: 2026 年 10 月 15 日
+**Claude Code 版本**: 2.1.300
+**来源**:
+- https://code.claude.com/docs/en/plugins
+- https://code.claude.com/docs/en/skills#frontmatter-reference

@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # Розширені функції
@@ -44,7 +44,7 @@
 **Ключові розширені функції:**
 - **Режим планування**: Створення детальних планів реалізації перед кодуванням
 - **Розширене мислення**: Глибоке міркування для складних проблем
-- **Auto Mode**: Фоновий класифікатор безпеки перевіряє кожну дію перед виконанням (Research Preview)
+- **Auto Mode**: Фоновий класифікатор безпеки перевіряє кожну дію перед виконанням
 - **Фонові завдання**: Виконання тривалих операцій без блокування розмови
 - **Режими дозволів**: Контроль дій Claude (`default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions`)
 - **Режим друку**: Неінтерактивний запуск Claude Code для автоматизації та CI/CD (`claude -p`)
@@ -112,7 +112,7 @@ claude --permission-mode plan
 
 **Клавіатурне скорочення**:
 - `Shift + Tab` — Перемикання режимів дозволів (включно з plan)
-- `Alt + M` — Перемикання режимів дозволів (Windows/Linux)
+- `Alt + M` — Перемикання режимів дозволів (лише Windows, коли середовище виконання не вмикає режим VT-вводу)
 
 ### Переваги режиму планування
 
@@ -196,10 +196,6 @@ claude --model opusplan "design and implement the new API"
 ```
 
 **Редагування плану зовні**: Натисніть `Ctrl+G`, щоб відкрити поточний план у зовнішньому редакторі для детальних змін.
-
-### Ultraplan
-
-Використовуйте `/ultraplan <prompt>` для наскрізного робочого процесу планування: Claude складає детальний план, відкриває його у браузері для перегляду, потім виконує план віддалено або повертає його у ваш термінал для локального виконання.
 
 ---
 
@@ -348,22 +344,23 @@ export CLAUDE_CODE_EFFORT_LEVEL=high
 
 ## Auto Mode
 
-Auto Mode — це режим дозволів Research Preview (березень 2026), який використовує фоновий класифікатор безпеки для перевірки кожної дії перед виконанням. Він дозволяє Claude працювати автономно, блокуючи небезпечні операції.
+Auto Mode — це режим дозволів, який використовує фоновий класифікатор безпеки для перевірки кожної дії перед виконанням. Він дозволяє Claude працювати автономно, блокуючи небезпечні операції. Доступний на всіх планах, але вимагає відповідної моделі та провайдера.
 
 ### Вимоги
 
 - **План**: Team, Enterprise або API (недоступно на планах Pro або Max)
 - **Модель**: Claude Sonnet 4.6 або Opus 4.6
 - **Провайдер**: Тільки Anthropic API (не підтримується на Bedrock, Vertex або Foundry)
-- **Класифікатор**: Працює на Claude Sonnet 4.6 (додаткова вартість токенів)
+- **Класифікатор**: Додаткова вартість токенів, окрім планів Enterprise та акаунтів Claude API, де v2.1.278+ виконує перевірку на боці сервера без оплати
 
 ### Увімкнення Auto Mode
 
 ```bash
-# Розблокування auto mode за допомогою прапорця CLI
-claude --enable-auto-mode
+# Інтерактивні сесії запускаються в auto mode, якщо режим дозволів не налаштовано (v2.1.284+)
+# Щоб вибрати його явно, наприклад коли ваші налаштування задають інший режим за замовчуванням:
+claude --permission-mode auto
 
-# Потім перемикайте через Shift+Tab у REPL
+# Або перемикайтеся на нього через Shift+Tab у REPL
 ```
 
 Або встановіть як режим дозволів за замовчуванням:
@@ -429,9 +426,9 @@ claude auto-mode defaults
 
 Це гарантує, що користувач завжди зберігає контроль, коли класифікатор не може впевнено затвердити дію.
 
-### Посів дозволів Auto-Mode без Team-плану
+### Посів дозволів Auto-Mode
 
-Якщо у вас немає Team-плану або ви хочете простіший підхід без фонового класифікатора, ви можете наповнити ваш `~/.claude/settings.json` консервативним базовим набором безпечних правил дозволів. Скрипт починає з правил тільки для читання та локального інспектування, потім дозволяє вам додавати редагування, тести, локальний запис у git, встановлення пакетів та дії запису GitHub лише за потреби.
+Якщо ви хочете простіший підхід без фонового класифікатора, ви можете наповнити ваш `~/.claude/settings.json` консервативним базовим набором безпечних правил дозволів. Скрипт починає з правил тільки для читання та локального інспектування, потім дозволяє вам додавати редагування, тести, локальний запис у git, встановлення пакетів та дії запису GitHub лише за потреби.
 
 **Файл:** `09-advanced-features/setup-auto-mode-permissions.py`
 
@@ -451,15 +448,14 @@ python3 09-advanced-features/setup-auto-mode-permissions.py --include-git-write 
 
 | Категорія | Приклади |
 |----------|---------|
-| Базові інструменти тільки для читання | `Read(*)`, `Glob(*)`, `Grep(*)`, `Agent(*)`, `WebSearch(*)`, `WebFetch(*)` |
+| Базові інструменти тільки для читання | `Read(*)`, `Grep(*)`, `Agent(*)`, `WebSearch(*)`, `WebFetch(*)` |
 | Локальне інспектування | `Bash(git status:*)`, `Bash(git log:*)`, `Bash(git diff:*)`, `Bash(cat:*)` |
-| Опціональне редагування | `Edit(*)`, `Write(*)`, `NotebookEdit(*)` |
+| Опціональне редагування | `Edit(*)` |
 | Опціональні тести/збірка | `Bash(pytest:*)`, `Bash(python3 -m pytest:*)`, `Bash(cargo test:*)` |
-| Опціональний запис у git | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git stash:*)` |
-| Git (локальний запис) | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git checkout:*)` |
-| Менеджери пакетів | `Bash(npm install:*)`, `Bash(pip install:*)`, `Bash(cargo build:*)` |
+| Опціональний запис у git | `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git checkout:*)`, `Bash(git switch:*)`, `Bash(git stash:*)`, `Bash(git tag:*)` |
+| Менеджери пакетів | `Bash(npm ci:*)`, `Bash(npm install:*)`, `Bash(pip install:*)`, `Bash(pip3 install:*)` |
 | Збірка та тести | `Bash(make:*)`, `Bash(pytest:*)`, `Bash(go test:*)` |
-| Звичайні shell-команди | `Bash(ls:*)`, `Bash(cat:*)`, `Bash(find:*)`, `Bash(cp:*)`, `Bash(mv:*)` |
+| Звичайні shell-команди | `Bash(ls:*)`, `Bash(cat:*)`, `Bash(find:*)` |
 | GitHub CLI | `Bash(gh pr view:*)`, `Bash(gh pr create:*)`, `Bash(gh issue list:*)` |
 
 Небезпечні операції (`rm -rf`, `sudo`, force push, `DROP TABLE`, `terraform destroy` тощо) навмисно виключені. Скрипт ідемпотентний — повторний запуск не дублює правила.
@@ -485,10 +481,8 @@ User: Run tests in background
 
 Claude: Started task bg-1234
 
-/task list           # Показати всі завдання
-/task status bg-1234 # Перевірити прогрес
-/task show bg-1234   # Переглянути вивід
-/task cancel bg-1234 # Скасувати завдання
+/tasks    # Переглянути й керувати фоновою роботою (оболонки та субагенти); звідси можна зупинити завдання
+Ctrl+B    # Перевести запущену Bash-команду або агента у фон
 ```
 
 ### Запуск фонових завдань
@@ -510,44 +504,19 @@ Claude: [Works on auth module while tests run in background]
 Claude: 📢 Background task bg-1234 completed:
 ✅ 245 tests passed
 ❌ 3 tests failed
-View results: /task show bg-1234
+View results: /tasks
 ```
 
 ### Управління фоновими завданнями
 
-**Список активних завдань**:
-```
-User: /task list
+Запустіть `/tasks` (псевдонім `/bashes`), щоб переглянути запущені оболонки й субагенти, відкрити один із них і побачити його вивід або зупинити його. Підкоманд `/task` не існує.
 
-Active background tasks:
-1. [bg-1234] Running tests (50% complete, 2min remaining)
-2. [bg-1235] Building Docker image (25% complete, 8min remaining)
-3. [bg-1236] Deploying to staging (90% complete, 30sec remaining)
-```
+```text
+User: /tasks
 
-**Перевірка статусу завдання**:
-```
-User: /task status bg-1234
-
-Task bg-1234: Running tests
-Status: In progress
-Progress: 120/245 tests (49%)
-Started: 2025-11-08 10:30:15
-Estimated completion: 2025-11-08 10:34:22
-```
-
-**Перегляд виводу завдання**:
-```
-User: /task show bg-1234
-
-[Shows live output from the test run]
-```
-
-**Скасування завдання**:
-```
-User: /task cancel bg-1234
-
-Cancelled background task bg-1234
+[Opens the background-work view: running shells and subagents,
+ including subagents that have finished. Select one to see its
+ output, or stop it from here.]
 ```
 
 ### Приклад: Паралельна розробка
@@ -577,17 +546,14 @@ Claude: [Shows linter output from bg-5002]
 
 ### Конфігурація
 
-```json
-{
-  "backgroundTasks": {
-    "enabled": true,
-    "maxConcurrentTasks": 5,
-    "notifyOnCompletion": true,
-    "autoCleanup": true,
-    "logOutput": true
-  }
-}
+Немає блоку `settings.json` для фонових завдань. Функція керується змінною середовища:
+
+```bash
+# Повністю вимкнути фонові завдання
+export CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=true
 ```
+
+Паралельність теж не є налаштуванням фонових завдань — кількість одночасно запущених агентів визначає `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (за замовчуванням `20`).
 
 ---
 
@@ -678,17 +644,17 @@ export CLAUDE_CODE_DISABLE_CRON=1
 | `default` | Тільки читання файлів; запитує дозвіл на всі інші дії |
 | `acceptEdits` | Читання та редагування файлів; запитує дозвіл на команди |
 | `plan` | Тільки читання файлів (режим дослідження, без редагувань) |
-| `auto` | Усі дії з перевірками фонового класифікатора безпеки (Research Preview) |
+| `auto` | Усі дії з перевірками фонового класифікатора безпеки |
 | `bypassPermissions` | Усі дії, без перевірки дозволів (небезпечно) |
 | `dontAsk` | Виконуються лише попередньо затверджені інструменти; всі інші відхиляються |
 
-Перемикайте режими через `Shift+Tab` у CLI. Встановіть режим за замовчуванням через прапорець `--permission-mode` або налаштування `permissions.defaultMode`.
+Перемикайте режими через `Shift+Tab` у CLI. Встановіть режим за замовчуванням через прапорець `--permission-mode` або налаштування `permissions.defaultMode`. Якщо режим дозволів не налаштовано, інтерактивні сесії в терміналі та VS Code починаючи з v2.1.284 запускаються в режимі auto на будь-якому плані та в будь-якого провайдера (у v2.1.283 так було лише у сторонніх провайдерів, як-от Bedrock, Agent Platform від Google Cloud і Foundry, або з вимкненою телеметрією); `permissions.defaultMode` і далі має пріоритет, а сесія, де режим auto недоступний, натомість запускається в режимі `default` (Manual). Починаючи з v2.1.302, сесії `claude -p` та Agent SDK, у яких не задано режим дозволів, запускаються в режимі `default` у сторонніх провайдерів, з вимкненою телеметрією або на свіжій інсталяції; передайте `--permission-mode auto`, щоб зберегти режим auto.
 
 ### Методи активації
 
 **Клавіатурне скорочення**:
 ```bash
-Shift + Tab  # Перемикання між усіма 6 режимами
+Shift + Tab  # Цикл default → acceptEdits → plan, далі bypassPermissions/auto, коли доступні (dontAsk ніколи не зʼявляється в циклі)
 ```
 
 **Слеш-команда**:
@@ -954,7 +920,7 @@ Claude Code підтримує клавіатурні скорочення дл�
 | `Ctrl+C` | Скасувати поточний ввід/генерацію |
 | `Ctrl+D` | Вийти з Claude Code |
 | `Ctrl+G` | Редагувати план у зовнішньому редакторі |
-| `Ctrl+L` | Очистити екран терміналу |
+| `Ctrl+L` | Перемалювати екран (лише перемальовування — подвійне натискання для `/clear` вилучено у v2.1.238) |
 | `Ctrl+O` | Перемкнути детальний вивід (перегляд міркувань) |
 | `Ctrl+R` | Зворотний пошук в історії |
 | `Ctrl+T` | Перемкнути перегляд списку завдань |
@@ -1034,7 +1000,7 @@ Claude Code підтримує клавіатурні скорочення дл�
 ```
 
 **Синтаксис клавіш**:
-- **Модифікатори**: `ctrl`, `alt` (або `opt`), `shift`, `meta` (або `cmd`)
+- **Модифікатори**: `ctrl` (або `control`), `alt` (або `opt`, `option`, `meta`), `shift` і `cmd` (або `command`, `super`, `win`) — `cmd` є окремим модифікатором, а не псевдонімом `meta`, і розпізнається лише в терміналах, які передають клавішу Super
 - **Великі літери включають Shift**: `K` еквівалентно `shift+k`
 - **Спеціальні клавіші**: `escape`, `enter`, `return`, `tab`, `space`, `backspace`, `delete`, клавіші стрілок
 
@@ -1081,26 +1047,22 @@ User: Ctrl+R  # Пошук в історії
 
 ### Багаторядковий ввід
 
-Для складних запитів використовуйте багаторядковий режим:
+Для складних запитів переходьте на новий рядок через `\` + Enter, Option+Enter (macOS), Shift+Enter або Ctrl+J. Термінатора `\end` немає — натисніть Enter, щоб надіслати:
 
 ```bash
-User: \
-> Long complex prompt
-> spanning multiple lines
-> \end
+User: Long complex prompt \
+spanning multiple lines
 ```
 
 **Приклад:**
 
 ```
-User: \
-> Implement a user authentication system
-> with the following requirements:
-> - JWT tokens
-> - Email verification
-> - Password reset
-> - 2FA support
-> \end
+User: Implement a user authentication system \
+with the following requirements: \
+- JWT tokens \
+- Email verification \
+- Password reset \
+- 2FA support
 
 Claude: [Processes the multi-line request]
 ```
@@ -1181,11 +1143,11 @@ User: Deploy to prodcution<Backspace><Backspace>uction
 ### Підписка на канали
 
 ```bash
-# Підписка на плагіни каналів при запуску
-claude --channels discord,telegram
+# Підписка на плагін каналу при запуску
+claude --channels plugin:telegram@claude-plugins-official
 
-# Підписка на кілька джерел
-claude --channels discord,telegram,imessage,webhooks
+# Підписка на кілька джерел (через пробіл)
+claude --channels plugin:discord@claude-plugins-official plugin:telegram@claude-plugins-official
 ```
 
 ### Підтримувані інтеграції
@@ -1203,25 +1165,29 @@ claude --channels discord,telegram,imessage,webhooks
 
 ```json
 {
-  "allowedChannelPlugins": ["discord", "telegram"]
+  "channelsEnabled": true,
+  "allowedChannelPlugins": [
+    { "marketplace": "claude-plugins-official", "plugin": "discord" },
+    { "marketplace": "claude-plugins-official", "plugin": "telegram" }
+  ]
 }
 ```
 
-Керована настройка `allowedChannelPlugins` контролює, які плагіни каналів дозволені в організації.
+Керована настройка `allowedChannelPlugins` контролює, які плагіни каналів дозволені в організації. Вона замінює підтримуваний Anthropic список дозволених і потребує `channelsEnabled: true`.
 
 ### Як це працює
 
 1. MCP-сервери діють як плагіни каналів, що підключаються до зовнішніх сервісів
 2. Вхідні повідомлення та події надсилаються в активну сесію Claude Code
 3. Claude може читати та відповідати на повідомлення в контексті сесії
-4. Плагіни каналів мають бути затверджені через керовану настройку `allowedChannelPlugins`
+4. Плагіни каналів мають бути в списку дозволених, який підтримує Anthropic, або в списку `allowedChannelPlugins` вашої організації, якщо адміністратор його задав
 5. Опитування не потрібне — події надсилаються в реальному часі
 
 ---
 
 ## Інтеграція Chrome
 
-Інтеграція Chrome підключає Claude Code до вашого браузера Chrome або Microsoft Edge для автоматизації та відлагодження веб-сторінок у реальному часі. Це бета-функція, доступна з v2.0.73+ (підтримка Edge додана в v1.0.36+).
+Інтеграція Chrome підключає Claude Code до вашого браузера Chrome або Microsoft Edge для автоматизації та відлагодження веб-сторінок у реальному часі. Це бета-функція, доступна з v2.0.73+ (потрібне розширення Claude in Chrome v1.0.36+).
 
 ### Увімкнення інтеграції Chrome
 
@@ -1261,7 +1227,7 @@ Claude Code керує браузером у видимому вікні — в�
 
 ### Відомі обмеження
 
-- **Підтримка браузерів**: Тільки Chrome та Edge — Brave, Arc та інші браузери на базі Chromium не підтримуються
+- **Підтримка браузерів**: Chrome та Edge; Claude Code також підключається в інших браузерах на базі Chromium, як-от Brave, Arc, Vivaldi та Opera
 - **WSL**: Недоступно у Windows Subsystem for Linux
 - **Сторонні провайдери**: Не підтримується з провайдерами API Bedrock, Vertex або Foundry
 - **Idle service worker**: Service worker розширення Chrome може переходити у неактивний стан під час тривалих сесій
@@ -1299,8 +1265,8 @@ claude remote-control --name "Auth Refactor"
 |------|-------------|
 | `--name "title"` | Власна назва сесії для зручної ідентифікації |
 | `--verbose` | Показувати детальні логи зʼєднання |
-| `--sandbox` | Увімкнути ізоляцію файлової системи та мережі |
-| `--no-sandbox` | Вимкнути пісочницю (за замовчуванням) |
+
+> **Примітка (v2.1.300)**: `claude remote-control` більше не приймає `--sandbox` чи `--no-sandbox` (вони ніколи не мали ефекту; передача будь-якого з них тепер завершується помилкою). Щоб запускати сесії Remote Control у пісочниці, встановіть `sandbox.enabled` у файлі налаштувань.
 
 ### Підключення до сесії
 
@@ -1327,9 +1293,9 @@ claude remote-control --name "Auth Refactor"
 
 ### Обмеження
 
-- Одна віддалена сесія на екземпляр Claude Code
+- Одна віддалена сесія на інтерактивний процес Claude Code — серверний режим (`claude remote-control`) обслуговує кілька одночасно (`--capacity`, за замовчуванням 32)
 - Термінал має залишатись відкритим на хост-машині
-- Сесія закінчується через ~10 хвилин, якщо мережа недоступна
+- Якщо мережа недоступна, серверний режим завершується приблизно через 10 хвилин; інтерактивна сесія продовжує повторні спроби й перепідключається, коли мережа повертається
 
 ### Випадки використання
 
@@ -1411,10 +1377,15 @@ claude --teleport
 
 ```json
 {
-  "command": "npm run dev",
-  "port": 3000,
-  "readyPattern": "ready on",
-  "persistCookies": true
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "my-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    }
+  ]
 }
 ```
 
@@ -1440,13 +1411,14 @@ claude --teleport
 
 ### Режими дозволів у десктопному додатку
 
-Десктопний додаток підтримує ті самі 4 режими дозволів, що й CLI:
+Десктопний додаток підтримує ті самі режими дозволів, що й CLI:
 
 | Режим | Поведінка |
 |------|----------|
-| **Ask permissions** (за замовчуванням) | Перегляд та затвердження кожного редагування та команди |
-| **Auto accept edits** | Редагування файлів автозатверджуються; команди потребують ручного затвердження |
-| **Plan mode** | Перегляд підходу перед будь-якими змінами |
+| **Manual** (за замовчуванням) | Перегляд та затвердження кожного редагування та команди |
+| **Accept edits** | Редагування файлів автозатверджуються; команди потребують ручного затвердження |
+| **Plan** | Перегляд підходу перед будь-якими змінами |
+| **Auto** | Робота без рутинних запитів; фоновий класифікатор спершу перевіряє дії |
 | **Bypass permissions** | Автоматичне виконання (лише у пісочниці, контролюється адміністратором) |
 
 ### Корпоративні функції
@@ -1560,16 +1532,19 @@ claude -w
 
 ### Увімкнення пісочниці
 
-**Слеш-команда**:
-```
+**Слеш-команда** (зберігає ваш вибір у `.claude/settings.local.json` для цього проєкту):
+```text
 /sandbox
 ```
 
-**Прапорці CLI**:
+**Файл налаштувань** (усі проєкти): встановіть `"sandbox": { "enabled": true }` у `~/.claude/settings.json`.
+
+**Для однієї сесії**, без запису у файл налаштувань:
 ```bash
-claude --sandbox       # Увімкнути пісочницю
-claude --no-sandbox    # Вимкнути пісочницю
+claude --settings '{"sandbox": {"enabled": true}}'
 ```
+
+> Прапорців `claude --sandbox` / `--no-sandbox` не існує. Починаючи з v2.1.300, передача їх у `claude remote-control` завершується помилкою.
 
 ### Налаштування конфігурації
 
@@ -1593,8 +1568,7 @@ claude --no-sandbox    # Вимкнути пісочницю
       "allowWrite": ["/Users/me/project"],
       "allowRead": ["/Users/me/project", "/usr/local/lib"],
       "denyRead": ["/Users/me/.ssh", "/Users/me/.aws"]
-    },
-    "enableWeakerNetworkIsolation": true
+    }
   }
 }
 ```
@@ -1604,7 +1578,7 @@ claude --no-sandbox    # Вимкнути пісочницю
 - Bash-команди виконуються у пісочниці з обмеженим доступом до файлової системи
 - Мережевий доступ може бути ізольований для запобігання небажаним зовнішнім зʼєднанням
 - Працює разом з правилами дозволів для глибокого захисту
-- На macOS використовуйте `sandbox.enableWeakerNetworkIsolation` для мережевих обмежень (повна ізоляція мережі недоступна на macOS)
+- На macOS Seatbelt блокує всі мережеві зʼєднання, крім зʼєднання з проксі пісочниці; `sandbox.enableWeakerNetworkIsolation` **послаблює** цю ізоляцію і потрібен лише для інструментів на кшталт Go CLI за MITM-проксі `httpProxyPort`
 
 ### Випадки використання
 
@@ -1629,10 +1603,10 @@ claude --no-sandbox    # Вимкнути пісочницю
 
 ### Керовані Drop-ins
 
-Починаючи з v2.1.83, адміністратори можуть розгортати кілька файлів керованих налаштувань у директорію `managed-settings.d/`. Файли обʼєднуються в алфавітному порядку, дозволяючи модульну конфігурацію між командами:
+Починаючи з v2.1.83, адміністратори можуть розгортати кілька файлів керованих налаштувань у директорію `managed-settings.d/`. Файли обʼєднуються в алфавітному порядку, дозволяючи модульну конфігурацію між командами. Директорія розташована поруч із `managed-settings.json` у системній директорії (`/Library/Application Support/ClaudeCode/` на macOS, `/etc/claude-code/` на Linux, `C:\Program Files\ClaudeCode\` на Windows):
 
 ```
-~/.claude/managed-settings.d/
+/etc/claude-code/managed-settings.d/
   00-org-defaults.json
   10-team-policies.json
   20-project-overrides.json
@@ -1642,7 +1616,7 @@ claude --no-sandbox    # Вимкнути пісочницю
 
 | Налаштування | Опис |
 |---------|-------------|
-| `disableBypassPermissionsMode` | Заборонити користувачам вмикати обхід дозволів |
+| `permissions.disableBypassPermissionsMode` | Встановіть `"disable"`, щоб заборонити користувачам вмикати обхід дозволів |
 | `availableModels` | Обмежити моделі, доступні для вибору |
 | `allowedChannelPlugins` | Контролювати дозволені плагіни каналів |
 | `autoMode.environment` | Налаштувати довірену інфраструктуру для auto mode |
@@ -1656,8 +1630,11 @@ claude --no-sandbox    # Вимкнути пісочницю
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>disableBypassPermissionsMode</key>
-  <true/>
+  <key>permissions</key>
+  <dict>
+    <key>disableBypassPermissionsMode</key>
+    <string>disable</string>
+  </dict>
   <key>availableModels</key>
   <array>
     <string>claude-sonnet-4-6</string>
@@ -1673,30 +1650,40 @@ claude --no-sandbox    # Вимкнути пісочницю
 
 ### Розташування файлів конфігурації
 
-1. **Глобальна конфігурація**: `~/.claude/config.json`
-2. **Конфігурація проєкту**: `./.claude/config.json`
-3. **Конфігурація користувача**: `~/.config/claude-code/settings.json`
+1. **Налаштування користувача**: `~/.claude/settings.json`
+2. **Налаштування проєкту**: `.claude/settings.json` (у репозиторії)
+3. **Локальні налаштування проєкту**: `.claude/settings.local.json` (не в репозиторії)
+4. **Керовані налаштування**: `managed-settings.json` у системній директорії (див. розділ про керовані налаштування вище)
 
 ### Повний приклад конфігурації
 
-**Конфігурація основних розширених функцій:**
+**Конфігурація основних розширених функцій** (`.claude/settings.json`):
 
 ```json
 {
   "permissions": {
-    "mode": "default"
+    "defaultMode": "manual"
   },
   "hooks": {
-    "PreToolUse:Edit": "eslint --fix ${file_path}",
-    "PostToolUse:Write": "~/.claude/hooks/security-scan.sh"
-  },
-  "mcp": {
-    "enabled": true,
-    "servers": {
-      "github": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"]
-      }
+    "PreToolUse": [
+      { "matcher": "Edit", "hooks": [{ "type": "command", "command": "~/.claude/hooks/eslint-fix.sh" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Write", "hooks": [{ "type": "command", "command": "~/.claude/hooks/security-scan.sh" }] }
+    ]
+  }
+}
+```
+
+Скрипти хуків отримують вхідні дані інструмента як JSON через stdin (наприклад, `tool_input.file_path`); підстановки `${file_path}` немає. MCP-сервери не є ключем налаштувань — визначайте їх у `.mcp.json` у корені проєкту:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}" }
     }
   }
 }
@@ -1707,31 +1694,20 @@ claude --no-sandbox    # Вимкнути пісочницю
 ```json
 {
   "permissions": {
-    "mode": "default",
-    "allowedTools": ["Bash(git log:*)", "Read"],
-    "disallowedTools": ["Bash(rm -rf:*)"]
+    "defaultMode": "manual",
+    "allow": ["Bash(git log:*)", "Read"],
+    "deny": ["Bash(rm -rf:*)"]
   },
 
   "hooks": {
-    "PreToolUse": [{ "matcher": "Edit", "hooks": ["eslint --fix ${file_path}"] }],
-    "PostToolUse": [{ "matcher": "Write", "hooks": ["~/.claude/hooks/security-scan.sh"] }],
-    "Stop": [{ "hooks": ["~/.claude/hooks/notify.sh"] }]
-  },
-
-  "mcp": {
-    "enabled": true,
-    "servers": {
-      "github": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-github"],
-        "env": {
-          "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-        }
-      }
-    }
+    "PreToolUse": [{ "matcher": "Edit", "hooks": [{ "type": "command", "command": "~/.claude/hooks/eslint-fix.sh" }] }],
+    "PostToolUse": [{ "matcher": "Write", "hooks": [{ "type": "command", "command": "~/.claude/hooks/security-scan.sh" }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "~/.claude/hooks/notify.sh" }] }]
   }
 }
 ```
+
+GitHub MCP-сервер для цього налаштування розміщується в `.mcp.json`, як показано вище.
 
 ### Змінні оточення
 
@@ -1752,7 +1728,7 @@ export MAX_THINKING_TOKENS=16000
 export CLAUDE_CODE_EFFORT_LEVEL=high
 
 # Перемикачі функцій
-export CLAUDE_CODE_DISABLE_AUTO_MEMORY=true
+export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1    # Вимкнути auto memory (файли auto memory не створюються і не завантажуються)
 export CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=true
 export CLAUDE_CODE_DISABLE_CRON=1
 export CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=true
@@ -1760,7 +1736,7 @@ export CLAUDE_CODE_DISABLE_TERMINAL_TITLE=true
 export CLAUDE_CODE_DISABLE_1M_CONTEXT=true
 export CLAUDE_CODE_DISABLE_NONSTREAMING_FALLBACK=true
 export CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false
-export CLAUDE_CODE_ENABLE_TASKS=true
+export CLAUDE_CODE_ENABLE_TASKS=0          # Інструменти Task використовуються за замовчуванням; 0 повертає застарілий інструмент TodoWrite
 export CLAUDE_CODE_SIMPLE=true              # Встановлюється прапорцем --bare
 
 # Конфігурація MCP
@@ -1801,23 +1777,28 @@ User: /config
 
 ### Конфігурація на рівні проєкту
 
-Створіть `.claude/config.json` у вашому проєкті:
+Створіть `.claude/settings.json` у вашому проєкті:
 
 ```json
 {
   "hooks": {
-    "PreToolUse": [{ "matcher": "Bash", "hooks": ["npm test && npm run lint"] }]
+    "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "npm test && npm run lint" }] }]
   },
   "permissions": {
-    "mode": "default"
-  },
-  "mcp": {
-    "servers": {
-      "project-db": {
-        "command": "mcp-postgres",
-        "env": {
-          "DATABASE_URL": "${PROJECT_DB_URL}"
-        }
+    "defaultMode": "manual"
+  }
+}
+```
+
+MCP-сервери проєкту розмістіть у `.mcp.json` у корені проєкту:
+
+```json
+{
+  "mcpServers": {
+    "project-db": {
+      "command": "mcp-postgres",
+      "env": {
+        "DATABASE_URL": "${PROJECT_DB_URL}"
       }
     }
   }
@@ -1843,7 +1824,9 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 
 ```json
 {
-  "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
 }
 ```
 
@@ -1940,6 +1923,30 @@ claude --teammate-mode in-process
 - [Офіційна документація Agent Teams](https://code.claude.com/docs/en/agent-teams)
 
 ---
-**Останнє оновлення**: 9 квітня 2026
-**Версія Claude Code**: 2.1.97
+**Останнє оновлення**: 18 жовтня 2026
+**Версія Claude Code**: 2.1.302
+**Джерела**:
+- https://code.claude.com/docs/en/permissions
+- https://code.claude.com/docs/en/auto-mode-classifier-billing
+- https://code.claude.com/docs/en/commands
+- https://code.claude.com/docs/en/keybindings#modifiers
+- https://code.claude.com/docs/en/permission-modes
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.283
+- https://code.claude.com/docs/en/permission-modes#which-mode-a-session-starts-in
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.284
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.285
+- https://code.claude.com/docs/en/remote-control
+- https://code.claude.com/docs/en/changelog#2-1-300
+- https://code.claude.com/docs/en/sandboxing
+- https://code.claude.com/docs/en/settings-reference#sandbox-enabled
+- https://code.claude.com/docs/en/interactive-mode
+- https://code.claude.com/docs/en/agent-teams
+- https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/hooks
+- https://code.claude.com/docs/en/managed-settings
+- https://code.claude.com/docs/en/channels
+- https://code.claude.com/docs/en/desktop
+- https://code.claude.com/docs/en/chrome
+- https://code.claude.com/docs/en/env-vars
+- https://code.claude.com/docs/en/changelog#2-1-302
 **Сумісні моделі**: Claude Sonnet 4.6, Claude Opus 4.6, Claude Haiku 4.5

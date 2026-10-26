@@ -13,8 +13,8 @@ Claude How-To の Markdown ファイル群から EPUB 形式の電子書籍を�
 ## 特徴
 
 - フォルダ構成（01-slash-commands、02-memory など）に沿って章を整理する
-- Mermaid 図を Kroki.io API 経由で PNG 画像としてレンダリングする
-- 非同期並行取得 — すべての図を並列にレンダリングする
+- Mermaid 図を [Pele](https://github.com/obsidianmd/pele)（Node.js で実行する固定バージョンのバンドル）で SVG 画像としてレンダリングする。CSS 変数は白背景上の通常の色に置き換えるため、どの EPUB リーダーでも表示できる
+- 同一の図をキャッシュし、ユニークな図は一度だけレンダリングする
 - プロジェクトロゴから表紙画像を生成する
 - 内部 Markdown リンクを EPUB の章参照へ変換する
 - 厳格モード — レンダリング不能な図があればビルドを失敗させる
@@ -23,7 +23,7 @@ Claude How-To の Markdown ファイル群から EPUB 形式の電子書籍を�
 
 - Python 3.10+
 - [uv](https://github.com/astral-sh/uv)
-- Mermaid 図レンダリング用のインターネット接続
+- Mermaid 図レンダリング用に `PATH` 上の Node.js >= 20。固定バージョンの Pele バンドルは初回実行時にダウンロードされ（ネットワークが必要なのは一度だけ）、sha256 で検証して `scripts/.vendor-cache/pele/` にキャッシュされる
 
 ## クイックスタート
 
@@ -53,15 +53,14 @@ python scripts/build_epub.py
 
 ```
 usage: build_epub.py [-h] [--root ROOT] [--output OUTPUT] [--verbose]
-                     [--timeout TIMEOUT] [--max-concurrent MAX_CONCURRENT]
+                     [--lang {en,vi,zh,ja}]
 
 options:
   -h, --help            show this help message and exit
   --root, -r ROOT       Root directory (default: repo root)
   --output, -o OUTPUT   Output path (default: claude-howto-guide.epub)
   --verbose, -v         Enable verbose logging
-  --timeout TIMEOUT     API timeout in seconds (default: 30)
-  --max-concurrent N    Max concurrent requests (default: 10)
+  --lang {en,vi,zh,ja}  Language to build (default: en)
 ```
 
 ## 使用例
@@ -73,8 +72,8 @@ uv run scripts/build_epub.py --verbose
 # 出力先をカスタマイズ
 uv run scripts/build_epub.py --output ~/Desktop/claude-guide.epub
 
-# 並行リクエスト数を制限（レート制限を受ける場合）
-uv run scripts/build_epub.py --max-concurrent 5
+# 日本語版をビルド
+uv run scripts/build_epub.py --lang ja
 ```
 
 ## 出力
@@ -85,7 +84,7 @@ EPUB には次が含まれる：
 - プロジェクトロゴ付きの表紙画像
 - ネストされた目次
 - すべての Markdown コンテンツを EPUB 互換 HTML に変換したもの
-- PNG 画像としてレンダリングされた Mermaid 図
+- SVG 画像としてレンダリングされた Mermaid 図
 
 ## テストの実行
 
@@ -97,7 +96,7 @@ pytest scripts/tests/ -v
 # または uv で直接実行
 uv run --with pytest --with pytest-asyncio \
     --with ebooklib --with markdown --with beautifulsoup4 \
-    --with httpx --with pillow --with tenacity \
+    --with pillow \
     pytest scripts/tests/ -v
 ```
 
@@ -110,14 +109,12 @@ PEP 723 のインラインスクリプトメタデータで管理する：
 | `ebooklib` | EPUB 生成 |
 | `markdown` | Markdown から HTML への変換 |
 | `beautifulsoup4` | HTML パース |
-| `httpx` | 非同期 HTTP クライアント |
 | `pillow` | 表紙画像生成 |
-| `tenacity` | リトライ処理 |
 
 ## トラブルシューティング
 
-**ネットワークエラーでビルドが失敗する**: インターネット接続と Kroki.io の稼働状況を確認する。`--timeout 60` を試す。
+**`Pele is unavailable` でビルドが失敗する**: Node.js >= 20 をインストールし、`node` が `PATH` 上にあることを確認する（`node --version`）。
 
-**レート制限**: `--max-concurrent 3` で並行リクエスト数を減らす。
+**Pele バンドルのダウンロードまたはチェックサムの失敗**: 初回ビルドは固定バージョンの Pele バンドルを cdn.jsdelivr.net からダウンロードし、各ファイルの sha256 を検証する。オフラインやプロキシ環境では、ネットワークに接続した状態で一度ビルドすれば、以降は `scripts/.vendor-cache/pele/<version>/` のキャッシュを使う。チェックサムの不一致はダウンロードが改変または途中で切れたことを意味するので、そのフォルダを削除して再度ビルドする。
 
 **ロゴが見つからない**: `claude-howto-logo.png` が見つからない場合、スクリプトはテキストのみの表紙を生成する。

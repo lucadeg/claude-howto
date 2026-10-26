@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../../resources/logos/claude-howto-logo-dark.svg">
-  <img alt="Claude How To" src="../../resources/logos/claude-howto-logo.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../../../resources/logos/claude-howto-logo-dark.svg">
+  <img alt="Claude How To" src="../../../resources/logos/claude-howto-logo.svg">
 </picture>
 
 # DevOps Automation Plugin
@@ -18,7 +18,7 @@ Complete DevOps automation for deployment, monitoring, and incident response.
 ## Installation
 
 ```bash
-/plugin install devops-automation
+claude --plugin-dir ./07-plugins/devops-automation
 ```
 
 ## What's Included
@@ -75,7 +75,7 @@ Complete DevOps automation for deployment, monitoring, and incident response.
 
 ## Requirements
 
-- Claude Code 1.0+
+- Claude Code 2.1+
 - Kubernetes CLI (kubectl)
 - Cluster access configured
 
@@ -105,3 +105,11 @@ Result:
 🚀 Pods: 3/3 ready
 ⏱️  Time: 2m 34s
 ```
+
+---
+
+**Cập Nhật Lần Cuối**: Ngày 18 tháng 10 năm 2026
+**Phiên Bản Claude Code**: 2.1.302
+**Nguồn**:
+- https://code.claude.com/docs/en/plugins/cli-reference
+- https://code.claude.com/docs/en/plugins/install

@@ -339,8 +339,10 @@ User: Now let's continue with the approach that worked.
 6. **Summarize long sessions**: Use "Summarize from here" to keep conversations manageable
 
 ---
-**Last Updated**: May 6, 2026
-**Claude Code Version**: 2.1.131
+**Last Updated**: July 29, 2026
+**Claude Code Version**: 2.1.220
 **Sources**:
 - https://code.claude.com/docs/en/checkpointing
 - https://code.claude.com/docs/en/changelog
+- https://code.claude.com/docs/en/model-config
+**Compatible Models**: Claude Fable 5, Claude Opus 5, Claude Sonnet 5, Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5
